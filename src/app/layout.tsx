@@ -1,4 +1,3 @@
-import { initNightwind } from '@/lib/nightwind';
 import Script from 'next/script';
 import './globals.css';
 import type { Metadata } from 'next';
@@ -15,16 +14,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      {/* Add nightwind init script */}
-      <Script strategy="beforeInteractive">{`
-        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark')
-        } else {
-          document.documentElement.classList.remove('dark')
-        }
-      `}</Script>
+      <head>
+        <Script id="nightwind-init" strategy="beforeInteractive">
+          {`if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+          } else {
+            document.documentElement.classList.remove('dark')
+          }`}
+        </Script>
+      </head>
       <body>
-        <script dangerouslySetInnerHTML={{ __html: 'nightwind.init();' }} />
         {children}
       </body>
     </html>

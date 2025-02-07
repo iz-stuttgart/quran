@@ -1,7 +1,7 @@
 // src/app/[lang]/grader/page.tsx
 import { Metadata } from 'next';
 import GraderPage from '@/components/GraderPage';
-import { descriptions, titles } from '@/types/grader';
+import { translations } from '@/types/grader';
 
 // Dynamic metadata based on language
 export async function generateMetadata({
@@ -10,8 +10,8 @@ export async function generateMetadata({
   params: { lang: string }
 }): Promise<Metadata> {
   return {
-    title: titles['de'],
-    description: descriptions['de'],
+    title: translations.titles['de'],
+    description: translations.descriptions['de'],
   };
 }
 

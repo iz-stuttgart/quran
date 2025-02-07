@@ -8,6 +8,138 @@
   --background-rgb: 255, 255, 255;
 }
 
+@layer base {
+  /* Style all text inputs and textareas */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  textarea {
+    @apply text-base py-2.5 px-3;
+    color: #111827; /* equivalent to gray-900 */
+    background-color: #ffffff;
+    border: 1px solid #93c5fd; /* equivalent to blue-300 - cool, subtle border */
+    border-radius: 0.375rem; /* equivalent to rounded */
+    transition: border-color 0.2s ease;
+  }
+
+  /* Custom radio button styles */
+  input[type="radio"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid #93c5fd; /* blue-300 */
+    border-radius: 50%;
+    outline: none;
+    cursor: pointer;
+    position: relative;
+    margin-right: 0.5rem;
+    vertical-align: -4px;
+    transition: all 0.2s ease;
+  }
+
+  input[type="radio"]:before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: transform 0.2s ease;
+  }
+
+  input[type="radio"]:checked {
+    border-color: #3b82f6; /* blue-500 */
+  }
+
+  input[type="radio"]:checked:before {
+    background-color: #3b82f6; /* blue-500 */
+    transform: scale(0.6);
+  }
+
+  input[type="radio"]:hover:not(:checked) {
+    border-color: #60a5fa; /* blue-400 */
+  }
+
+  input[type="radio"]:focus {
+    @apply ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  /* Dark mode radio adjustments */
+  .dark input[type="radio"] {
+    border-color: #1d4ed8; /* blue-700 */
+    background-color: #1f2937; /* gray-800 */
+  }
+
+  .dark input[type="radio"]:checked {
+    border-color: #3b82f6; /* blue-500 */
+  }
+
+  .dark input[type="radio"]:checked:before {
+    background-color: #3b82f6; /* blue-500 */
+  }
+
+  .dark input[type="radio"]:hover:not(:checked) {
+    border-color: #2563eb; /* blue-600 */
+  }
+
+  /* Style specific types of inputs */
+  input[type="checkbox"] {
+    @apply w-4 h-4;
+  }
+
+  /* Add focus styles */
+  input:focus,
+  textarea:focus {
+    @apply ring-2 ring-blue-500 outline-none;
+    border-color: #3b82f6; /* equivalent to blue-500 */
+  }
+
+  /* Ensure consistent text size in all form elements */
+  input,
+  textarea,
+  select {
+    @apply text-base;
+    color: #111827; /* equivalent to gray-900 */
+    background-color: #ffffff;
+  }
+
+  /* Style placeholder text */
+  input::placeholder,
+  textarea::placeholder {
+    color: #6b7280; /* equivalent to gray-500 */
+  }
+
+  /* Hover state */
+  input:hover:not(:focus):not([type="radio"]),
+  textarea:hover:not(:focus) {
+    border-color: #60a5fa; /* equivalent to blue-400 */
+  }
+
+  /* Dark mode adjustments */
+  .dark input[type="text"],
+  .dark input[type="number"],
+  .dark input[type="date"],
+  .dark textarea,
+  .dark select {
+    color: #f3f4f6; /* equivalent to gray-100 */
+    background-color: #1f2937; /* equivalent to gray-800 */
+    border-color: #1d4ed8; /* equivalent to blue-700 - darker but still cool border */
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #9ca3af; /* equivalent to gray-400 */
+  }
+
+  .dark input:hover:not(:focus):not([type="radio"]),
+  .dark textarea:hover:not(:focus) {
+    border-color: #2563eb; /* equivalent to blue-600 */
+  }
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));

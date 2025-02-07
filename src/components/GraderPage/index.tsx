@@ -1,7 +1,8 @@
-'use client';
+"use client"
 
 import React, { useState } from 'react';
-import { Menu } from 'lucide-react';
+import { Dialog } from '@headlessui/react';
+import { Menu, X } from 'lucide-react';
 import { compress } from '@/lib/compression';
 import { ReportData } from '@/types/report';
 import { ExamSection, Student, ValidationErrors } from '@/types/grader';
@@ -9,42 +10,29 @@ import GraderSidebar from './GraderSidebar';
 import GradesGrid from './GradesGrid';
 import DarkModeToggle from '../DarkModeToggle';
 
-// Default exam sections that match the structure from defaultData
 const defaultExamSections: ExamSection[] = [
   {
-    name: {
-      de: 'Memorization',
-      ar: 'حفظ'
-    },
+    name: { de: 'Memorization', ar: 'حفظ' },
     weight: 40
   },
   {
-    name: {
-      de: 'Recent Review',
-      ar: 'مراجعة قريبة'
-    },
+    name: { de: 'Recent Review', ar: 'مراجعة قريبة' },
     weight: 30
   },
   {
-    name: {
-      de: 'Past Review',
-      ar: 'مراجعة بعيدة'
-    },
+    name: { de: 'Past Review', ar: 'مراجعة بعيدة' },
     weight: 20
   },
   {
-    name: {
-      de: 'Attendance',
-      ar: 'حضور'
-    },
+    name: { de: 'Attendance', ar: 'حضور' },
     weight: 10
   }
 ];
 
-// UI text translations
 const translations = {
   de: {
     title: 'Noteneingabe',
+    sidebarTitle: 'Klassendaten',
     toggleSidebar: 'Seitenleiste ein-/ausblenden',
     generate: 'Links generieren',
     results: 'Generierte Links',
@@ -56,6 +44,7 @@ const translations = {
   },
   ar: {
     title: 'إدخال الدرجات',
+    sidebarTitle: 'بيانات الفصل',
     toggleSidebar: 'إظهار/إخفاء القائمة الجانبية',
     generate: 'توليد الروابط',
     results: 'الروابط المولدة',
@@ -72,48 +61,36 @@ interface GraderPageProps {
 }
 
 export default function GraderPage({ lang }: GraderPageProps) {
-  // Safety check for lang prop with default to 'de'
   const validLang = lang === 'de' ? 'de' : 'ar';
   const t = translations[validLang];
   const isRTL = validLang === 'ar';
   
-  // State for sidebar visibility on mobile
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  
-  // Form state with meaningful defaults
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [schoolYear, setSchoolYear] = useState(new Date().getFullYear().toString());
   const [classroom, setClassroom] = useState('');
   const [examDate, setExamDate] = useState(new Date().toISOString().split('T')[0]);
   const [examSections, setExamSections] = useState<ExamSection[]>(defaultExamSections);
   const [students, setStudents] = useState<Student[]>([]);
   const [generatedLinks, setGeneratedLinks] = useState<string[]>([]);
-  
-  // Validation state
   const [errors, setErrors] = useState<ValidationErrors>({});
 
-  // Handlers for form submission and validation
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
     
-    // Validate weights sum to 100%
     const totalWeight = examSections.reduce((sum, section) => sum + section.weight, 0);
     if (totalWeight !== 100) {
       newErrors.weights = t.validation.weightsSum;
     }
     
-    // Validate required fields
     if (!schoolYear) newErrors.schoolYear = t.validation.requiredField;
     if (!classroom) newErrors.classroom = t.validation.requiredField;
     if (!examDate) newErrors.examDate = t.validation.requiredField;
     
-    // Validate student names and grades
     students.forEach(student => {
-      // Validate student name
       if (!student.name.trim()) {
         newErrors[`name-${student.id}`] = t.validation.requiredField;
       }
 
-      // Validate grades
       examSections.forEach(section => {
         const grade = student.grades[section.name.de];
         if (grade === undefined) {
@@ -129,14 +106,10 @@ export default function GraderPage({ lang }: GraderPageProps) {
   };
 
   const handleStudentsChange = (newStudents: Student[]) => {
-    // Clean up errors for removed students
     const newErrors = { ...errors };
     Object.keys(newErrors).forEach(key => {
-      // Check if the error key belongs to a student (starts with 'name-' or 'grade-')
       if ((key.startsWith('name-') || key.startsWith('grade-'))) {
-        // Extract student ID from the error key
         const studentId = key.split('-')[1];
-        // If the student no longer exists, remove their errors
         if (!newStudents.some(s => s.id === studentId)) {
           delete newErrors[key];
         }
@@ -171,97 +144,137 @@ export default function GraderPage({ lang }: GraderPageProps) {
     setGeneratedLinks(links);
   };
 
+  const SidebarContent = (
+    <GraderSidebar
+      lang={validLang}
+      schoolYear={schoolYear}
+      classroom={classroom}
+      examDate={examDate}
+      examSections={examSections}
+      errors={errors}
+      onSchoolYearChange={setSchoolYear}
+      onClassroomChange={setClassroom}
+      onExamDateChange={setExamDate}
+      onExamSectionsChange={setExamSections}
+    />
+  );
+
   return (
     <div className="min-h-screen bg-gray-100" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Mobile controls group - now includes dark mode toggle */}
-      <div className="lg:hidden fixed top-4 left-4 z-50 flex items-center gap-4">
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="p-2 bg-white rounded-md shadow-md"
-          aria-label={t.toggleSidebar}
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-        <div className="p-2 bg-white rounded-md shadow-md">
-          <DarkModeToggle />
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                aria-label={t.toggleSidebar}
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <h1 className="text-xl font-semibold text-gray-900 mx-4">{t.title}</h1>
+            </div>
+            <DarkModeToggle />
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Desktop dark mode toggle */}
-      <div className="hidden lg:block fixed top-4 right-4 z-50 p-2 bg-white rounded-md shadow-md">
-        <DarkModeToggle />
-      </div>
+      {/* Mobile menu dialog */}
+      <Dialog
+        as="div"
+        open={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        className="relative z-50 lg:hidden"
+      >
+        {/* Background overlay */}
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+
+        {/* Dialog position */}
+        <div className="fixed inset-0 flex">
+          <Dialog.Panel
+            className={`relative flex-1 flex flex-col w-full max-w-xs bg-white focus:outline-none ${
+              isRTL ? 'mr-auto' : 'ml-auto'
+            }`}
+          >
+            {/* Close button */}
+            <div className="absolute top-0 right-0 pt-4 pr-4">
+              <button
+                type="button"
+                className="p-2 rounded-md text-gray-400 hover:text-gray-500"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Sidebar title */}
+            <div className="px-6 pt-6 pb-4">
+              <Dialog.Title className="text-lg font-semibold">{t.sidebarTitle}</Dialog.Title>
+            </div>
+
+            {/* Sidebar content */}
+            <div className="flex-1 overflow-y-auto">
+              {SidebarContent}
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
 
       {/* Main layout */}
-      <div className="flex">
-        {/* Sidebar */}
-        <aside
-          className={`
-            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-            fixed lg:static lg:translate-x-0
-            w-80 h-screen bg-white shadow-lg
-            transition-transform duration-300 ease-in-out
-            overflow-y-auto z-40
-          `}
-        >
-          <GraderSidebar 
-            lang={validLang}
-            schoolYear={schoolYear}
-            classroom={classroom}
-            examDate={examDate}
-            examSections={examSections}
-            errors={errors}
-            onSchoolYearChange={setSchoolYear}
-            onClassroomChange={setClassroom}
-            onExamDateChange={setExamDate}
-            onExamSectionsChange={setExamSections}
-          />
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1 p-6">
-          <h1 className="text-2xl font-bold mb-6">{t.title}</h1>
-          
-          {/* Grades grid */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <GradesGrid
-              lang={validLang}
-              examSections={examSections}
-              students={students}
-              errors={errors}
-              onStudentsChange={handleStudentsChange}
-            />
-          </div>
-
-          {/* Generate button */}
-          <button
-            onClick={generateReportLinks}
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
-          >
-            {t.generate}
-          </button>
-
-          {/* Generated links section */}
-          {generatedLinks.length > 0 && (
-            <div className="mt-6 bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-bold mb-4">{t.results}</h2>
-              <ul className="space-y-2">
-                {generatedLinks.map((link, index) => (
-                  <li key={index}>
-                    <a
-                      href={link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {students[index].name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex gap-6 py-6">
+          {/* Desktop sidebar */}
+          <aside className="hidden lg:block w-80 flex-shrink-0">
+            <div className="sticky top-6 bg-white shadow-sm rounded-lg overflow-hidden">
+              {SidebarContent}
             </div>
-          )}
-        </main>
+          </aside>
+
+          {/* Main content */}
+          <main className="flex-1 space-y-6">
+            {/* Grades grid */}
+            <div className="bg-white rounded-lg shadow-sm p-6">
+              <GradesGrid
+                lang={validLang}
+                examSections={examSections}
+                students={students}
+                errors={errors}
+                onStudentsChange={handleStudentsChange}
+              />
+            </div>
+
+            {/* Generate button */}
+            <button
+              onClick={generateReportLinks}
+              className="w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+            >
+              {t.generate}
+            </button>
+
+            {/* Generated links section */}
+            {generatedLinks.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-xl font-semibold mb-4">{t.results}</h2>
+                <ul className="space-y-2">
+                  {generatedLinks.map((link, index) => (
+                    <li key={index}>
+                      <a
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        {students[index].name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </main>
+        </div>
       </div>
     </div>
   );

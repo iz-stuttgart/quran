@@ -1,11 +1,9 @@
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
-import { ExamSection } from '@/types/grader';
+import { Plus, Trash2, AlertCircle } from 'lucide-react';
+import { ExamSection, Language, ValidationErrors, WEIGHT_CONSTRAINTS } from '@/types/grader';
 
-// Define translations for sidebar-specific content
 const translations = {
   de: {
-    title: 'Klassendaten',
     basicInfo: {
       title: 'Grundinformationen',
       schoolYear: 'Schuljahr',
@@ -18,7 +16,8 @@ const translations = {
       nameGerman: 'Name (Deutsch)',
       nameArabic: 'Name (Arabisch)',
       weight: 'Gewichtung (%)',
-      totalWeight: 'Gesamtgewichtung'
+      totalWeight: 'Gesamtgewichtung',
+      remove: 'Prüfungsteil entfernen'
     },
     validation: {
       required: 'Dieses Feld ist erforderlich',
@@ -27,7 +26,6 @@ const translations = {
     }
   },
   ar: {
-    title: 'بيانات الفصل',
     basicInfo: {
       title: 'المعلومات الأساسية',
       schoolYear: 'السنة الدراسية',
@@ -40,7 +38,8 @@ const translations = {
       nameGerman: 'الإسم (بالألمانية)',
       nameArabic: 'الإسم (بالعربية)',
       weight: 'النسبة (%)',
-      totalWeight: 'مجموع النسب'
+      totalWeight: 'مجموع النسب',
+      remove: 'حذف القسم'
     },
     validation: {
       required: 'هذا الحقل مطلوب',
@@ -51,12 +50,12 @@ const translations = {
 } as const;
 
 interface GraderSidebarProps {
-  lang: 'de' | 'ar';
+  lang: Language;
   schoolYear: string;
   classroom: string;
   examDate: string;
   examSections: ExamSection[];
-  errors: Record<string, string>;
+  errors: ValidationErrors;
   onSchoolYearChange: (value: string) => void;
   onClassroomChange: (value: string) => void;
   onExamDateChange: (value: string) => void;
@@ -78,12 +77,10 @@ export default function GraderSidebar({
   const t = translations[lang];
   const isRTL = lang === 'ar';
   
-  // Calculate total weight of all sections for validation display
   const totalWeight = examSections.reduce((sum, section) => sum + section.weight, 0);
+  const hasWeightError = totalWeight !== WEIGHT_CONSTRAINTS.TOTAL;
 
-  // Handler for adding a new exam section
   const handleAddSection = () => {
-    // Create a new section with default values
     const newSection: ExamSection = {
       name: {
         de: '',
@@ -94,17 +91,13 @@ export default function GraderSidebar({
     onExamSectionsChange([...examSections, newSection]);
   };
 
-  // Handler for removing an exam section
   const handleRemoveSection = (index: number) => {
-    const updatedSections = examSections.filter((_, i) => i !== index);
-    onExamSectionsChange(updatedSections);
+    onExamSectionsChange(examSections.filter((_, i) => i !== index));
   };
 
-  // Handler for updating section values
-  const handleSectionChange = (index: number, field: keyof ExamSection | 'name.de' | 'name.ar', value: string | number) => {
+  const handleSectionChange = (index: number, field: 'name.de' | 'name.ar' | 'weight', value: string | number) => {
     const updatedSections = [...examSections];
     
-    // Handle nested name object updates
     if (field === 'name.de' || field === 'name.ar') {
       const lang = field.split('.')[1] as 'de' | 'ar';
       updatedSections[index] = {
@@ -115,11 +108,10 @@ export default function GraderSidebar({
         }
       };
     } else if (field === 'weight') {
-      // Convert weight to number and validate
-      const weightValue = Math.min(100, Math.max(0, Number(value) || 0));
+      const weightValue = Math.min(WEIGHT_CONSTRAINTS.MAX, Math.max(WEIGHT_CONSTRAINTS.MIN, Number(value) || 0));
       updatedSections[index] = {
         ...updatedSections[index],
-        [field]: weightValue
+        weight: weightValue
       };
     }
     
@@ -127,24 +119,40 @@ export default function GraderSidebar({
   };
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="divide-y divide-gray-200">
       {/* Basic Information Section */}
-      <section>
-        <h3 className="text-lg font-semibold mb-4">{t.basicInfo.title}</h3>
+      <section className="p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
+          {t.basicInfo.title}
+        </h3>
+        
         <div className="space-y-4">
           {/* School Year Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {t.basicInfo.schoolYear}
             </label>
-            <input
-              type="text"
-              value={schoolYear}
-              onChange={(e) => onSchoolYearChange(e.target.value)}
-              className={`w-full border rounded-md p-2 ${errors.schoolYear ? 'border-red-500' : 'border-gray-300'}`}
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={schoolYear}
+                onChange={(e) => onSchoolYearChange(e.target.value)}
+                className={`
+                  w-full rounded-md shadow-sm
+                  ${errors.schoolYear 
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                  }
+                `}
+              />
+              {errors.schoolYear && (
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                </div>
+              )}
+            </div>
             {errors.schoolYear && (
-              <p className="text-red-500 text-sm mt-1">{errors.schoolYear}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.schoolYear}</p>
             )}
           </div>
 
@@ -153,14 +161,27 @@ export default function GraderSidebar({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {t.basicInfo.classroom}
             </label>
-            <input
-              type="text"
-              value={classroom}
-              onChange={(e) => onClassroomChange(e.target.value)}
-              className={`w-full border rounded-md p-2 ${errors.classroom ? 'border-red-500' : 'border-gray-300'}`}
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={classroom}
+                onChange={(e) => onClassroomChange(e.target.value)}
+                className={`
+                  w-full rounded-md shadow-sm
+                  ${errors.classroom 
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                  }
+                `}
+              />
+              {errors.classroom && (
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                </div>
+              )}
+            </div>
             {errors.classroom && (
-              <p className="text-red-500 text-sm mt-1">{errors.classroom}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.classroom}</p>
             )}
           </div>
 
@@ -169,48 +190,64 @@ export default function GraderSidebar({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {t.basicInfo.examDate}
             </label>
-            <input
-              type="date"
-              value={examDate}
-              onChange={(e) => onExamDateChange(e.target.value)}
-              className={`w-full border rounded-md p-2 ${errors.examDate ? 'border-red-500' : 'border-gray-300'}`}
-            />
+            <div className="relative">
+              <input
+                type="date"
+                value={examDate}
+                onChange={(e) => onExamDateChange(e.target.value)}
+                className={`
+                  w-full rounded-md shadow-sm
+                  ${errors.examDate 
+                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
+                  }
+                `}
+              />
+              {errors.examDate && (
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                </div>
+              )}
+            </div>
             {errors.examDate && (
-              <p className="text-red-500 text-sm mt-1">{errors.examDate}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.examDate}</p>
             )}
           </div>
         </div>
       </section>
 
       {/* Exam Sections */}
-      <section>
+      <section className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">{t.sections.title}</h3>
+          <h3 className="text-lg font-medium text-gray-900">
+            {t.sections.title}
+          </h3>
           <button
+            type="button"
             onClick={handleAddSection}
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
+            className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700"
           >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm">{t.sections.addSection}</span>
+            <Plus className="h-4 w-4 mr-1" aria-hidden="true" />
+            {t.sections.addSection}
           </button>
         </div>
 
-        {/* Section List */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {examSections.map((section, index) => (
-            <div key={index} className="border rounded-lg p-4 relative">
-              {/* Remove Section Button */}
+            <div
+              key={index}
+              className="relative p-4 bg-gray-50 rounded-lg border border-gray-200"
+            >
               <button
+                type="button"
                 onClick={() => handleRemoveSection(index)}
                 className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
-                aria-label="Remove section"
+                aria-label={t.sections.remove}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
               </button>
 
-              {/* Section Form Fields */}
-              <div className="grid grid-cols-1 gap-4">
-                {/* German Name */}
+              <div className="grid gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t.sections.nameGerman}
@@ -219,11 +256,10 @@ export default function GraderSidebar({
                     type="text"
                     value={section.name.de}
                     onChange={(e) => handleSectionChange(index, 'name.de', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md p-2"
+                    className="w-full rounded-md shadow-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
 
-                {/* Arabic Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t.sections.nameArabic}
@@ -232,23 +268,22 @@ export default function GraderSidebar({
                     type="text"
                     value={section.name.ar}
                     onChange={(e) => handleSectionChange(index, 'name.ar', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md p-2"
+                    className="w-full rounded-md shadow-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                     dir="rtl"
                   />
                 </div>
 
-                {/* Weight */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t.sections.weight}
                   </label>
                   <input
                     type="number"
-                    min="0"
-                    max="100"
+                    min={WEIGHT_CONSTRAINTS.MIN}
+                    max={WEIGHT_CONSTRAINTS.MAX}
                     value={section.weight}
                     onChange={(e) => handleSectionChange(index, 'weight', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md p-2"
+                    className="w-full rounded-md shadow-sm border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -256,10 +291,20 @@ export default function GraderSidebar({
           ))}
 
           {/* Total Weight Display */}
-          <div className={`text-right ${totalWeight !== 100 ? 'text-red-500' : 'text-green-600'}`}>
-            {t.sections.totalWeight}: {totalWeight}%
-            {totalWeight !== 100 && (
-              <p className="text-sm mt-1">{t.validation.weightSum}</p>
+          <div className={`
+            mt-4 p-3 rounded-md text-sm
+            ${hasWeightError 
+              ? 'bg-red-50 text-red-700' 
+              : 'bg-green-50 text-green-700'
+            }
+          `}>
+            <p className="font-medium">
+              {t.sections.totalWeight}: {totalWeight}%
+            </p>
+            {hasWeightError && (
+              <p className="mt-1 text-sm">
+                {t.validation.weightSum}
+              </p>
             )}
           </div>
         </div>
