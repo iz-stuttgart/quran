@@ -2,11 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Printer } from "lucide-react";
+import { Download,Printer } from "lucide-react";
 import pako from 'pako';
 import { useMemo } from 'react';
 import { ReportData } from '@/types/report';
 import { defaultData } from "@/lib/defaults";
+import html2pdf from 'html2pdf.js';
 
 // Translations now only include UI elements, not section names
 const translations = {
@@ -24,6 +25,7 @@ const translations = {
     notes: 'Anmerkungen',
     date: 'Datum',
     switchLang: 'العربية',
+    download: 'Als PDF herunterladen',
     print: 'Drucken'
   },
   ar: {
@@ -40,9 +42,49 @@ const translations = {
     notes: 'ملاحظات',
     date: 'التاريخ',
     switchLang: 'Deutsch',
+    download: 'تحميل كملف PDF',
     print: 'طباعة'
   }
 } as const;
+
+const handleDownload = (reportData) => {
+  // Use a class name without square brackets
+  const element = document.querySelector('.report-container');
+  
+  if (!element) return;
+
+  const formatFileName = () => {
+    const className = reportData.classroom?.trim() || 'no-class';
+    const studentName = reportData.studentName?.trim() || 'unnamed';
+    
+    const sanitizeForFileName = (str: string) => {
+      return str
+        .replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .toLowerCase();
+    };
+
+    const currentDate = new Date().toISOString().split('T')[0];
+    return `report_${sanitizeForFileName(className)}_${sanitizeForFileName(studentName)}_${currentDate}.pdf`;
+  };
+
+  const opt = {
+    margin: 0,
+    filename: formatFileName(),
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { 
+      scale: 2,
+      useCORS: true 
+    },
+    jsPDF: {
+      unit: 'mm',
+      format: 'a5',
+      orientation: 'portrait'
+    }
+  };
+
+  html2pdf().set(opt).from(element).save();
+};
 
 function formatDate(dateStr: string, lang: 'de' | 'ar'): string {
   const date = new Date(dateStr);
@@ -238,27 +280,40 @@ export default function HomePage({ lang, reportData }: HomePageProps) {
 
   return (
     <div className="min-h-screen bg-gray-100 py-6 px-4 print:p-0 print:bg-white">
-      {/* Print button */}
-      <button
-        onClick={handlePrint}
-        className="fixed top-4 left-4 print:hidden bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 shadow-md"
-      >
-        <Printer size={20} />
-        <span>{t.print}</span>
-      </button>
-
-      {/* A4 Container */}
-      <div className="max-w-[210mm] mx-auto bg-white shadow-lg print:shadow-none">
-        <div className="w-full p-6" dir={textDir}>
-          {/* Language switcher */}
-          <Link
-            href={switchLanguageHref}
-            className="absolute top-4 right-4 print:hidden rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+      {/* Top controls container - Everything here won't be printed */}
+      <div className="fixed top-4 w-full flex justify-between items-center print:hidden">
+        {/* Left side - Print and Download buttons */}
+        <div className="flex gap-2 ml-4">
+          <button
+            onClick={handlePrint}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 shadow-md"
           >
-            {t.switchLang}
-          </Link>
-
-          {/* Header with logos */}
+            <Printer size={20} />
+            <span>{t.print}</span>
+          </button>
+          
+          <button
+            onClick={() => handleDownload(reportData)}
+            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center gap-2 shadow-md"
+          >
+            <Download size={20} />
+            <span>{t.download}</span>
+          </button>
+        </div>
+  
+        {/* Right side - Language switcher */}
+        <Link
+          href={switchLanguageHref}
+          className="mr-4 rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+        >
+          {t.switchLang}
+        </Link>
+      </div>
+  
+      {/* Report Container - This is what gets printed */}
+      <div className="max-w-[210mm] mx-auto bg-white shadow-lg print:shadow-none report-container">
+        <div className="w-full p-6" dir={textDir}>
+          {/* Rest of the report content */}
           <div className="flex justify-between items-center mb-6">
             <Image
               src="/institute-logo.png"
@@ -278,7 +333,7 @@ export default function HomePage({ lang, reportData }: HomePageProps) {
               className="object-contain"
             />
           </div>
-
+  
           {/* Student Information */}
           <div className="space-y-4 mb-6">
             <div className="flex border-b border-gray-300 pb-2">
