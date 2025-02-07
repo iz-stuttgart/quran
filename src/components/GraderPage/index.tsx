@@ -7,6 +7,7 @@ import { ReportData } from '@/types/report';
 import { ExamSection, Student, ValidationErrors } from '@/types/grader';
 import GraderSidebar from './GraderSidebar';
 import GradesGrid from './GradesGrid';
+import DarkModeToggle from '../DarkModeToggle';
 
 // Default exam sections that match the structure from defaultData
 const defaultExamSections: ExamSection[] = [
@@ -172,14 +173,24 @@ export default function GraderPage({ lang }: GraderPageProps) {
 
   return (
     <div className="min-h-screen bg-gray-100" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Mobile sidebar toggle */}
-      <button
-        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md"
-        aria-label={t.toggleSidebar}
-      >
-        <Menu className="h-6 w-6" />
-      </button>
+      {/* Mobile controls group - now includes dark mode toggle */}
+      <div className="lg:hidden fixed top-4 left-4 z-50 flex items-center gap-4">
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="p-2 bg-white rounded-md shadow-md"
+          aria-label={t.toggleSidebar}
+        >
+          <Menu className="h-6 w-6" />
+        </button>
+        <div className="p-2 bg-white rounded-md shadow-md">
+          <DarkModeToggle />
+        </div>
+      </div>
+
+      {/* Desktop dark mode toggle */}
+      <div className="hidden lg:block fixed top-4 right-4 z-50 p-2 bg-white rounded-md shadow-md">
+        <DarkModeToggle />
+      </div>
 
       {/* Main layout */}
       <div className="flex">

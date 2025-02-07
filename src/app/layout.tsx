@@ -1,5 +1,7 @@
-import './globals.css'
-import type { Metadata } from 'next'
+import { initNightwind } from '@/lib/nightwind';
+import Script from 'next/script';
+import './globals.css';
+import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'IZS Annual Results',
@@ -13,7 +15,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      {/* Add nightwind init script */}
+      <Script strategy="beforeInteractive">{`
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark')
+        } else {
+          document.documentElement.classList.remove('dark')
+        }
+      `}</Script>
+      <body>
+        <script dangerouslySetInnerHTML={{ __html: 'nightwind.init();' }} />
+        {children}
+      </body>
     </html>
-  )
+  );
 }
