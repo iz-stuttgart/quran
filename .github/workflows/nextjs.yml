@@ -24,6 +24,9 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+env:
+  NEXT_LINT_ERROR: false
+
 jobs:
   # Build job
   build:
@@ -74,7 +77,10 @@ jobs:
       - name: Install dependencies
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
       - name: Build with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build
+        run: |
+          # Run lint with --max-warnings flag to prevent failing on warnings
+          ${{ steps.detect-package-manager.outputs.runner }} next lint --max-warnings 9999
+          ${{ steps.detect-package-manager.outputs.runner }} next build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
