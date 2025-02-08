@@ -1,22 +1,31 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // Completely disable TypeScript checking
-    typescript: {
-      ignoreBuildErrors: true,
-      tsconfigPath: "tsconfig.json"
-    },
-    // Completely disable ESLint
-    eslint: {
-      ignoreDuringBuilds: true,
-      ignoreDevelopmentErrors: true,
-      ignoreDirectories: ["**/*/"]
-    },
-    // Required for static export
-    output: 'export',
-    // Disable image optimization since we're doing static export
-    images: {
-      unoptimized: true
+  typescript: {
+    ignoreBuildErrors: true,
+    tsconfigPath: "tsconfig.json"
+  },
+  // Completely disable ESLint
+  eslint: {
+    ignoreDuringBuilds: true
+  },
+  output: 'export',
+  images: {
+    unoptimized: true,
+  },
+  webpack: (config: { resolve: { fallback: any; }; }, { isServer }: any) => {
+    // Avoid bundling client-only modules in server bundle
+    if (isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        crypto: false,
+        stream: false,
+        util: false,
+        zlib: false,
+        // Add any other problematic modules here
+      };
     }
-  }
-  
-  module.exports = nextConfig
+    return config;
+  },
+}
+
+module.exports = nextConfig;

@@ -1,7 +1,12 @@
+'use client';
+
 import pako from 'pako';
 import { ReportData } from '@/types/report';
 
 export function compress(data: ReportData): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
   try {
     const jsonString = JSON.stringify(data);
     const textEncoder = new TextEncoder();
@@ -22,11 +27,14 @@ export function compress(data: ReportData): string {
     return encodeURIComponent(urlSafe);
   } catch (error) {
     console.error('Compression error:', error);
-    throw error;
+    return '';
   }
 }
 
 export function decompress(compressed: string): ReportData | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
   try {
     if (!compressed) return null;
     
