@@ -23,8 +23,6 @@ env:
   ESLINT_NO_DEV_ERRORS: true
   TS_NODE_TRANSPILE_ONLY: 1
   NODE_ENV: "production"
-  DISABLE_ESLINT_PLUGIN: true
-  DISABLE_TYPE_CHECK: true
 
 jobs:
   build:

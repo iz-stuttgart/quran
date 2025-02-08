@@ -42,7 +42,7 @@ export interface ExamSection {
  * Exam section with an assigned grade
  */
 export interface GradedExamSection extends ExamSection {
-  grade: number;          // Grade (1-6)
+  grade: number | undefined;          // Grade (1-6)
 }
 
 /**

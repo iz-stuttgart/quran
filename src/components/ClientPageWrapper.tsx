@@ -7,7 +7,7 @@ const ClientWrapper = dynamic(
   { ssr: false }
 );
 
-export default function ClientPageWrapper({ lang }: { lang: string }) {
+export default function ClientPageWrapper({ lang }: { lang: 'de' | 'ar' }) {
   return (
     <div suppressHydrationWarning>
       <ClientWrapper lang={lang} />

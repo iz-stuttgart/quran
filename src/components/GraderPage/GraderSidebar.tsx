@@ -75,7 +75,6 @@ export default function GraderSidebar({
   onExamSectionsChange
 }: GraderSidebarProps) {
   const t = translations[lang];
-  const isRTL = lang === 'ar';
   
   const totalWeight = examSections.reduce((sum, section) => sum + section.weight, 0);
   const hasWeightError = totalWeight !== WEIGHT_CONSTRAINTS.TOTAL;

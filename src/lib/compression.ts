@@ -18,7 +18,7 @@ export function compress(data: ReportData): string {
       binaryString += String.fromCharCode(compressed[i]);
     }
     
-    let base64 = btoa(binaryString);
+    const base64 = btoa(binaryString);
     const urlSafe = base64
       .replace(/\+/g, '-')
       .replace(/\//g, '_')

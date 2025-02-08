@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import { ReportData } from '@/types/report';
 import { defaultData } from "@/lib/defaults";
 import html2pdf from 'html2pdf.js';
+import { GradedExamSection } from "@/types/grader";
 
 // Translations now only include UI elements, not section names
 const translations = {
@@ -47,7 +48,7 @@ const translations = {
   }
 } as const;
 
-const handleDownload = (reportData) => {
+const handleDownload = (reportData: ReportData) => {
   // Use a class name without square brackets
   const element = document.querySelector('.report-container');
   
@@ -69,48 +70,50 @@ const handleDownload = (reportData) => {
   };
 
   const opt = {
-    margin: 0,
+    margin: 0.5,
     filename: formatFileName(),
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { 
+    image: {
+      type: 'jpeg',
+      quality: 1
+    },
+    html2canvas: {
       scale: 2,
-      useCORS: true 
+      useCORS: true
     },
     jsPDF: {
-      unit: 'mm',
+      unit: 'in',
       format: 'a5',
-      orientation: 'portrait'
+      orientation: 'portrait' as const
     }
   };
 
-  html2pdf().set(opt).from(element).save();
+  html2pdf().set(opt).from(element as HTMLElement).save();
 };
 
 function formatDate(dateStr: string, lang: 'de' | 'ar'): string {
   const date = new Date(dateStr);
   
   // Common options for both calendars
-  const fullOptions = {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  const fullOptions: Intl.DateTimeFormatOptions = {
+    weekday: 'long' as const,
+    year: 'numeric' as const,
+    month: 'long' as const,
+    day: 'numeric' as const
   };
-  
+
   // Options without weekday for secondary date
-  const dateOnlyOptions = {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
+  const dateOnlyOptions: Intl.DateTimeFormatOptions = {
+    year: 'numeric' as const,
+    month: 'long' as const,
+    day: 'numeric' as const
   };
 
   if (lang === 'de') {
     // German formatting
-    // Primary (Gregorian) date with weekday
     const gregorianFormatter = new Intl.DateTimeFormat('de-DE', fullOptions);
     const gregorianParts = gregorianFormatter.formatToParts(date);
     let gregorianDate = '';
-    
+
     // Secondary (Hijri) date without weekday
     const hijriFormatter = new Intl.DateTimeFormat('de-DE-u-ca-islamic-umalqura', dateOnlyOptions);
     const hijriParts = hijriFormatter.formatToParts(date);
@@ -132,12 +135,10 @@ function formatDate(dateStr: string, lang: 'de' | 'ar'): string {
     return `${gregorianDate} (${hijriDate} AH)`;
   } else {
     // Arabic formatting
-    // Primary (Hijri) date with weekday
     const hijriFormatter = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', fullOptions);
     const hijriParts = hijriFormatter.formatToParts(date);
     let hijriDate = '';
-    
-    // Secondary (Gregorian) date without weekday
+
     const gregorianFormatter = new Intl.DateTimeFormat('ar', dateOnlyOptions);
     const gregorianParts = gregorianFormatter.formatToParts(date);
     let gregorianDate = '';
@@ -178,7 +179,7 @@ function compress(data: ReportData): string {
     }
 
     // Step 5: Convert to base64
-    let base64 = btoa(binaryString);
+    const base64 = btoa(binaryString);
 
     // Step 6: Make the base64 URL-safe by replacing characters
     // Replace '+' with '-' and '/' with '_'
@@ -196,30 +197,7 @@ function compress(data: ReportData): string {
   }
 }
 
-function decompress(compressed: string): ReportData | null {
-  try {
-    if (!compressed) return null;
-    const urlDecoded = decodeURIComponent(compressed);
-    let base64 = urlDecoded.replace(/-/g, '+').replace(/_/g, '/');
-    while (base64.length % 4) base64 += '=';
-
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-
-    const decompressed = pako.inflate(bytes);
-    const text = new TextDecoder().decode(decompressed);
-
-    return JSON.parse(text);
-  } catch (error) {
-    console.error('Decompression error:', error);
-    return null;
-  }
-}
-
-function calculateTotalGrade(examSections: ExamSection[]): number | null {
+function calculateTotalGrade(examSections: GradedExamSection[]): number | null {
   const validGrades = examSections.every(section =>
     typeof section.grade === 'number' &&
     section.grade >= 1 &&

@@ -1,13 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-    tsconfigPath: "tsconfig.json"
-  },
-  // Completely disable ESLint
-  eslint: {
-    ignoreDuringBuilds: true
-  },
   output: 'export',
   images: {
     unoptimized: true,

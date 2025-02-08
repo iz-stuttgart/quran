@@ -3,26 +3,28 @@ import { Metadata } from 'next';
 import GraderPage from '@/components/GraderPage';
 import { translations } from '@/types/grader';
 
-// Dynamic metadata based on language
-export async function generateMetadata({
-  params: { lang }
-}: {
-  params: { lang: string }
-}): Promise<Metadata> {
-  
+// Define supported languages type
+type SupportedLang = 'de' | 'ar';
 
+type Props = {
+  params: Promise<{ lang: SupportedLang }>;
+};
+
+// Metadata generation
+export async function generateMetadata({ 
+  params 
+}: Props): Promise<Metadata> {
+  const { lang } = await params;
   return {
-    title: translations.titles['ar'],
-    description: translations.descriptions['ar'],
+    title: translations.titles[lang],
+    description: translations.descriptions[lang],
   };
 }
 
-interface GraderProps {
-  params: {
-    lang: 'de' | 'ar'
-  }
-}
-
-export default function Grader({ params }: GraderProps) {
-  return <GraderPage lang='ar' />;
+// Page component
+export default async function Grader({ 
+  params 
+}: Props) {
+  const { lang } = await params;
+  return <GraderPage lang={lang} />;
 }

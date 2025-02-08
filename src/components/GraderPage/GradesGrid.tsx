@@ -78,7 +78,6 @@ export default function GradesGrid({
   onStudentsChange
 }: GradesGridProps) {
   const t = translations[lang];
-  const isRTL = lang === 'ar';
   
   const [filter, setFilter] = useState<StudentFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,7 +134,7 @@ export default function GradesGrid({
     onStudentsChange(students.filter(s => s.id !== studentId));
   };
 
-  const handleStudentChange = (studentId: string, field: keyof Student, value: any) => {
+  const handleStudentChange = (studentId: string, field: keyof Student, value: string) => {
     onStudentsChange(students.map(student => 
       student.id === studentId
         ? { ...student, [field]: value }
