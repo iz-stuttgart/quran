@@ -1,7 +1,7 @@
 import { ReportData } from "@/types/report";
 
 export const defaultData: ReportData = {
-  schoolYear: "2025",
+  schoolYear: "2024-2025",
   studentName: "أحمد محمد",
   classroom: "الفوج السادس",
   gender: 'm',

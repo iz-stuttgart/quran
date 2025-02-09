@@ -10,10 +10,9 @@ import { defaultData } from "@/lib/defaults";
 import html2pdf from 'html2pdf.js';
 import { GradedExamSection } from "@/types/grader";
 
-// Translations now only include UI elements, not section names
 const translations = {
   de: {
-    title: 'Jahresergebnis',
+    title: 'Erstes Semester',
     studentName: {
       m: 'Name des Schülers',
       f: 'Name der Schülerin'
@@ -30,7 +29,7 @@ const translations = {
     print: 'Drucken'
   },
   ar: {
-    title: 'النتيجة السنوية',
+    title: 'الفصل الدراسي الأول',
     studentName: {
       m: 'اسم الطالب',
       f: 'اسم الطالبة'
@@ -48,8 +47,20 @@ const translations = {
   }
 } as const;
 
+interface StyleSheet extends HTMLStyleElement {
+  innerHTML: string;
+}
+
+interface Html2CanvasOptions {
+  scale: number;
+  useCORS: boolean;
+  backgroundColor: string;
+  ignoreElements: (element: HTMLElement) => boolean;
+  logging: boolean;
+  letterRendering: boolean;
+}
+
 const handleDownload = (reportData: ReportData) => {
-  // Use a class name without square brackets
   const element = document.querySelector('.report-container');
   
   if (!element) return;
@@ -69,6 +80,7 @@ const handleDownload = (reportData: ReportData) => {
     return `report_${sanitizeForFileName(className)}_${sanitizeForFileName(studentName)}_${currentDate}.pdf`;
   };
 
+  // Configure options to preserve content while removing print artifacts
   const opt = {
     margin: 0.5,
     filename: formatFileName(),
@@ -78,16 +90,63 @@ const handleDownload = (reportData: ReportData) => {
     },
     html2canvas: {
       scale: 2,
-      useCORS: true
-    },
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      ignoreElements: (element: HTMLElement) => {
+        return element.classList.contains('print-only') || 
+               element.tagName === 'HEADER' || 
+               element.tagName === 'FOOTER';
+      },
+      logging: true,
+      letterRendering: true
+    } as Html2CanvasOptions,
     jsPDF: {
       unit: 'in',
       format: 'a5',
-      orientation: 'portrait' as const
+      orientation: 'portrait' as const,
+      marginTop: 0.1,
+      marginBottom: 0.1,
+      marginLeft: 0.1,
+      marginRight: 0.1,
+      putOnlyUsedFonts: true
     }
   };
 
-  html2pdf().set(opt).from(element as HTMLElement).save();
+  // Before generating the PDF, temporarily modify any print-specific styles
+  const originalStyles = new Map<StyleSheet, string>();
+  const printStyles = document.querySelectorAll<StyleSheet>('style, link[rel="stylesheet"]');
+  
+  printStyles.forEach((styleSheet: StyleSheet) => {
+    if (styleSheet instanceof HTMLStyleElement) {
+      originalStyles.set(styleSheet, styleSheet.innerHTML);
+      styleSheet.innerHTML = styleSheet.innerHTML
+        .replace(/@page[^{]*{[^}]*}/g, '')
+        .replace(/@media\s+print[^{]*{[^}]*}/g, '');
+    }
+  });
+
+  // Generate the PDF with preserved content
+  html2pdf()
+    .set(opt)
+    .from(element as HTMLElement)
+    .save()
+    .then(() => {
+      // Restore original styles
+      printStyles.forEach((styleSheet: StyleSheet) => {
+        if (styleSheet instanceof HTMLStyleElement) {
+          styleSheet.innerHTML = originalStyles.get(styleSheet) || '';
+        }
+      });
+    })
+    .catch((error: Error) => {
+      console.error('PDF generation failed:', error);
+      // Make sure to restore styles even if PDF generation fails
+      printStyles.forEach((styleSheet: StyleSheet) => {
+        if (styleSheet instanceof HTMLStyleElement) {
+          styleSheet.innerHTML = originalStyles.get(styleSheet) || '';
+        }
+      });
+    });
 };
 
 function formatDate(dateStr: string, lang: 'de' | 'ar'): string {
@@ -253,132 +312,96 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
 
   const switchLanguageHref = useMemo(() => {
     const newLang = lang === 'de' ? 'ar' : 'de';
-    return `/${newLang}${urlParameter}`;
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+    return `/${base}/${newLang}/2024-2025-S1/${urlParameter}`;
   }, [lang, urlParameter]);
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 px-4 print:p-0 print:bg-white">
-      {/* Top controls container - Everything here won't be printed */}
-      <div className="fixed top-4 w-full flex justify-between items-center print:hidden">
-        {/* Left side - Print and Download buttons */}
-        <div className="flex gap-2 ml-4">
-          <button
-            onClick={handlePrint}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 shadow-md"
-          >
-            <Printer size={20} />
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-100 py-4 px-2 print:p-0 print:bg-white">
+      {/* Controls */}
+      <div className="fixed top-2 w-full flex justify-between items-center print:hidden">
+        <div className="flex gap-1 ml-2">
+          <button onClick={handlePrint} className="bg-blue-600 text-white px-2 py-1 text-sm rounded-md hover:bg-blue-700 flex items-center gap-1 shadow-md">
+            <Printer size={16} />
             <span>{t.print}</span>
           </button>
-          
-          <button
-            onClick={() => handleDownload(reportData)}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center gap-2 shadow-md"
-          >
-            <Download size={20} />
+          <button onClick={() => handleDownload(reportData)} className="bg-green-600 text-white px-2 py-1 text-sm rounded-md hover:bg-green-700 flex items-center gap-1 shadow-md">
+            <Download size={16} />
             <span>{t.download}</span>
           </button>
         </div>
-  
-        {/* Right side - Language switcher */}
-        <Link
-          href={switchLanguageHref}
-          className="mr-4 rounded-md border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
-        >
+        <Link href={switchLanguageHref} className="mr-2 rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">
           {t.switchLang}
         </Link>
       </div>
   
-      {/* Report Container - This is what gets printed */}
-      <div className="max-w-[210mm] mx-auto bg-white shadow-lg print:shadow-none report-container">
-        <div className="w-full p-6" dir={textDir}>
-          {/* Rest of the report content */}
-          <div className="flex justify-between items-center mb-6">
-            <Image
-              src="/institute-logo.png"
-              alt="Institute Logo"
-              width={70}
-              height={70}
-              className="object-contain"
-            />
-            <h1 className={`text-2xl font-bold ${textAlign}`}>
+      {/* Report Container - Optimized for A5 */}
+      <div className="max-w-[148mm] mx-auto bg-white shadow-lg print:shadow-none rounded-lg report-container">
+        <div className="h-8 bg-gradient-to-r from-green-600 to-green-800 rounded-t-lg print:hidden" />
+        
+        <div className="w-full p-4" dir={textDir}>
+          {/* Header with Logos - Reduced size */}
+          <div className="flex justify-between items-center mb-4 relative">
+            <div className="absolute inset-0 flex justify-center items-center opacity-5 pointer-events-none">
+              <div className="w-32 h-32 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: "url('/institute-logo.png')" }} />
+            </div>
+            <Image src="/institute-logo.png" alt="Institute Logo" width={40} height={40} className="object-contain z-10" />
+            <h1 className={`text-xl font-bold ${textAlign} text-green-900`}>
               {t.title} {reportData.schoolYear}
             </h1>
-            <Image
-              src="/quran-logo.png"
-              alt="Quran Logo"
-              width={70}
-              height={70}
-              className="object-contain"
-            />
+            <Image src="/quran-logo.png" alt="Quran Logo" width={40} height={40} className="object-contain z-10" />
           </div>
   
-          {/* Student Information */}
-          <div className="space-y-4 mb-6">
-            <div className="flex border-b border-gray-300 pb-2">
-              <span className="w-1/3 font-bold text-gray-700">
-                {t.studentName[reportData.gender]}:
-              </span>
-              <span className="w-2/3 border-b border-dashed border-gray-400">
-                {reportData.studentName || ''}
-              </span>
+          {/* Student Information - Compact */}
+          <div className="space-y-2 mb-4 bg-gray-50 p-3 rounded-lg">
+            <div className="flex items-center">
+              <span className="w-1/3 font-semibold text-gray-700 text-sm">{t.studentName[reportData.gender]}:</span>
+              <span className="w-2/3 text-base font-medium text-green-900">{reportData.studentName || ''}</span>
             </div>
-            <div className="flex border-b border-gray-300 pb-2">
-              <span className="w-1/3 font-bold text-gray-700">{t.group}:</span>
-              <span className="w-2/3 border-b border-dashed border-gray-400">
-                {reportData.classroom || ''}
-              </span>
+            <div className="flex items-center">
+              <span className="w-1/3 font-semibold text-gray-700 text-sm">{t.group}:</span>
+              <span className="w-2/3 text-base font-medium text-green-900">{reportData.classroom || ''}</span>
             </div>
           </div>
-
-          {/* Evaluation Table */}
-          <div className="overflow-x-auto mb-6">
-            <table className="w-full border-collapse">
+  
+          {/* Evaluation Table - Compact rows */}
+          <div className="overflow-hidden rounded-lg border border-gray-200 mb-4">
+            <table className="w-full border-collapse bg-white">
               <thead>
-                <tr className="bg-gray-50">
-                  <th className={`p-2 border border-gray-300 ${textAlign}`}>{t.evaluationTitle}</th>
-                  <th className={`p-2 border border-gray-300 ${textAlign} w-24`}>{t.percentage}</th>
-                  <th className={`p-2 border border-gray-300 ${textAlign} w-24`}>{t.studentGrade}</th>
+                <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <th className={`p-2 border-b border-gray-200 ${textAlign} text-gray-700 text-sm`}>{t.evaluationTitle}</th>
+                  <th className={`p-2 border-b border-gray-200 ${textAlign} w-16 text-gray-700 text-sm`}>{t.percentage}</th>
+                  <th className={`p-2 border-b border-gray-200 ${textAlign} w-16 text-gray-700 text-sm`}>{t.studentGrade}</th>
                 </tr>
               </thead>
               <tbody>
-                {/* Exam sections - now using multilingual names */}
                 {reportData.examSections.map((section, index) => (
-                  <tr key={index}>
-                    <td className="p-2 border border-gray-300">
-                      {section.name[lang]}
-                    </td>
-                    <td className="p-2 border border-gray-300 text-center">{section.weight}%</td>
-                    <td className="p-2 border border-gray-300 text-center">
-                      {section.grade?.toFixed(1) || ''}
-                    </td>
+                  <tr key={index} className="hover:bg-green-50">
+                    <td className="p-2 border-b border-gray-200 text-sm">{section.name[lang]}</td>
+                    <td className="p-2 border-b border-gray-200 text-center text-sm">{section.weight}%</td>
+                    <td className="p-2 border-b border-gray-200 text-center font-medium text-sm">{section.grade?.toFixed(1) || ''}</td>
                   </tr>
                 ))}
-
-                {/* Total grade row */}
-                <tr className="font-bold bg-gray-50">
-                  <td colSpan={2} className="p-2 border border-gray-300">
-                    {t.totalGrade}
-                  </td>
-                  <td className="p-2 border border-gray-300 text-center">
-                    {totalGrade?.toFixed(1) || ''}
-                  </td>
+                <tr className="font-bold bg-green-50">
+                  <td colSpan={2} className="p-2 border-t-2 border-green-200 text-sm">{t.totalGrade}</td>
+                  <td className="p-2 border-t-2 border-green-200 text-center text-green-900 text-sm">{totalGrade?.toFixed(1) || ''}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-
-          {/* Notes Section */}
-          <div className="mb-6">
-            <p className="font-bold text-gray-700 mb-2">{t.notes}:</p>
-            <div className="border-b border-dashed border-gray-400 h-16">
+  
+          {/* Notes Section - Reduced height */}
+          <div className="mb-4 bg-gray-50 p-3 rounded-lg">
+            <p className="font-semibold text-gray-700 mb-1 text-sm">{t.notes}:</p>
+            <div className="min-h-8 bg-white p-2 rounded border border-gray-200 text-sm">
               {reportData.notes || ''}
             </div>
           </div>
-
-          {/* Date Section */}
-          <div className={`${textAlign}`}>
-            <p className="font-bold text-gray-700 mb-1">{t.date}:</p>
-            <p>{formattedDate}</p>
+  
+          {/* Date Section - Compact */}
+          <div className={`${textAlign} bg-gray-50 p-2 rounded-lg`}>
+            <p className="font-semibold text-gray-700 mb-1 text-sm">{t.date}:</p>
+            <p className="text-green-900 text-sm">{formattedDate}</p>
           </div>
         </div>
       </div>

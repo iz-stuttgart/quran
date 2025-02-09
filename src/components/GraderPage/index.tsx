@@ -22,7 +22,7 @@ const config = {
     const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
     // Remove any leading slashes from the path to avoid double slashes
     const cleanPath = path.replace(/^\//, '');
-    return `${base}/${cleanPath}`;
+    return `/${base}/${cleanPath}`;
   }
 };
 
