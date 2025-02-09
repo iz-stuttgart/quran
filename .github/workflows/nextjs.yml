@@ -1,34 +1,23 @@
-# Name of the workflow - this appears in the GitHub Actions UI
 name: Deploy Next.js site to Pages
 
-# Define when this workflow should run
 on:
-  # Run on pushes to the main branch
   push:
     branches: ["main"]
-  # Allow manual triggering through the GitHub UI
   workflow_dispatch:
 
-# Define required permissions
 permissions:
-  contents: read  # Need to read repository contents
-  pages: write    # Need to write to GitHub Pages
-  id-token: write # Need to write deployment status
+  contents: read
+  pages: write
+  id-token: write
 
-# Concurrency settings to prevent multiple deployments running at once
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
-# Environment variables available to all jobs and steps
 env:
-  # Production environment for optimal build output
   NODE_ENV: "production"
-  # Disable Next.js telemetry for cleaner logs
   NEXT_TELEMETRY_DISABLED: 1
-  # Enable detailed debugging output
   NEXT_DEBUG: true
-  # Enable all debug logging
   DEBUG: "*"
 
 jobs:
@@ -37,30 +26,25 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Setup Debug Logging
-        run: |
-          echo "Starting build process with debug logging enabled"
-          echo "Node version: $(node -v)"
-          echo "NPM version: $(npm -v)"
-          mkdir -p logs
-
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          # Fetch all history for accurate builds
-          fetch-depth: 0
+
+      - name: Initialize Build Environment
+        run: |
+          echo "Initializing build environment..."
+          mkdir -p logs
+          echo "Created logs directory at $(pwd)/logs"
+          echo "Node version: $(node -v)"
+          echo "NPM version: $(npm -v)"
 
       - name: Detect Package Manager
         id: detect-package-manager
         run: |
-          echo "Detecting package manager..."
           if [ -f "${{ github.workspace }}/yarn.lock" ]; then
-            echo "Found yarn.lock"
             echo "manager=yarn" >> $GITHUB_OUTPUT
             echo "command=install" >> $GITHUB_OUTPUT
             echo "runner=yarn" >> $GITHUB_OUTPUT
           elif [ -f "${{ github.workspace }}/package.json" ]; then
-            echo "Found package.json"
             echo "manager=npm" >> $GITHUB_OUTPUT
             echo "command=ci" >> $GITHUB_OUTPUT
             echo "runner=npx --no-install" >> $GITHUB_OUTPUT
@@ -69,88 +53,55 @@ jobs:
             exit 1
           fi
 
-      - name: Setup Node.js Environment
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: ${{ steps.detect-package-manager.outputs.manager }}
-        
-      - name: Setup GitHub Pages Configuration
+
+      - name: Setup Pages
         uses: actions/configure-pages@v5
         with:
           static_site_generator: next
 
-      - name: Setup Build Cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            .next/cache
-            node_modules/.cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx', '**/*.json') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
-            ${{ runner.os }}-nextjs-
-
       - name: Install Dependencies
         run: |
-          echo "Installing dependencies with ${{ steps.detect-package-manager.outputs.manager }}"
-          ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }} 2>&1 | tee logs/install.log
-
-      - name: TypeScript Diagnostics
-        run: |
-          echo "Running TypeScript diagnostics..."
-          ${{ steps.detect-package-manager.outputs.runner }} tsc --noEmit --pretty --diagnostics --traceResolution 2>&1 | tee logs/ts-diagnostics.log
-        continue-on-error: true
-
-      - name: Next.js Type Check
-        run: |
-          echo "Running Next.js type check..."
-          ${{ steps.detect-package-manager.outputs.runner }} next typecheck --debug 2>&1 | tee logs/next-typecheck.log
-        continue-on-error: true
-
-      - name: Build Project
-        run: |
-          echo "Starting Next.js build process..."
-          {
-            ${{ steps.detect-package-manager.outputs.runner }} next build \
-              --debug \
-              --no-lint \
-              --trace-warnings \
-              --verbose 2>&1 
-          } | tee logs/build.log || {
-            echo "=== Build Failed ==="
-            echo "Exit code: $?"
-            echo "=== TypeScript Diagnostics Log ==="
-            cat logs/ts-diagnostics.log
-            echo "=== Next.js Type Check Log ==="
-            cat logs/next-typecheck.log
-            echo "=== Build Log ==="
-            cat logs/build.log
-            echo "=== Environment Information ==="
-            node -v
-            npm -v
-            echo "=== Package Versions ==="
-            ${{ steps.detect-package-manager.outputs.manager }} list | grep -E "typescript|@types|next|react"
+          echo "Starting dependency installation..."
+          ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }} > logs/install.log 2>&1 || {
+            echo "Installation failed. Log contents:"
+            cat logs/install.log
             exit 1
           }
+          echo "Dependencies installed successfully"
+
+      - name: Run Type Checks
+        run: |
+          echo "Running type checks..."
+          ${{ steps.detect-package-manager.outputs.runner }} tsc --noEmit --pretty > logs/typecheck.log 2>&1 || {
+            echo "Type checking failed. Log contents:"
+            cat logs/typecheck.log
+            exit 1
+          }
+          echo "Type checks completed successfully"
+
+      - name: Build Next.js Project
+        run: |
+          echo "Starting Next.js build..."
+          ${{ steps.detect-package-manager.outputs.runner }} next build --debug > logs/build.log 2>&1 || {
+            echo "Build failed. Log contents:"
+            cat logs/build.log
+            exit 1
+          }
+          echo "Build completed successfully"
         env:
-          NODE_OPTIONS: "--max-old-space-size=4096 --trace-warnings"
+          NODE_OPTIONS: "--max-old-space-size=4096"
 
-      - name: Upload Build Logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-logs
-          path: logs/
-          retention-days: 7
-
-      - name: Upload Pages Artifact
+      - name: Upload Artifacts
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./out
 
   deploy:
-    name: Deploy to GitHub Pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
