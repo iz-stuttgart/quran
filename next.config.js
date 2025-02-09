@@ -4,7 +4,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  webpack: (config: { resolve: { fallback: any; }; }, { isServer }: any) => {
+  webpack: (config, { isServer }) => {
     // Avoid bundling client-only modules in server bundle
     if (isServer) {
       config.resolve.fallback = {
