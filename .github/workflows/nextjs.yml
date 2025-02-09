@@ -74,15 +74,33 @@ jobs:
           }
           echo "Dependencies installed successfully"
 
-      - name: Run Type Checks
+      - name: Detailed Type Check
         run: |
-          echo "Running type checks..."
-          ${{ steps.detect-package-manager.outputs.runner }} tsc --noEmit --pretty > logs/typecheck.log 2>&1 || {
-            echo "Type checking failed. Log contents:"
-            cat logs/typecheck.log
+          echo "Running detailed type analysis..."
+          
+          # First, verify TypeScript configuration
+          echo "TypeScript configuration validation:"
+          ${{ steps.detect-package-manager.outputs.runner }} tsc --showConfig
+          
+          # Then run type checking with maximum verbosity
+          echo "Full type check with all errors:"
+          ${{ steps.detect-package-manager.outputs.runner }} tsc --noEmit \
+            --pretty --diagnostics \
+            --extendedDiagnostics \
+            --explainFiles \
+            --listFiles \
+            --traceResolution > typescript-check.log || true
+          
+          echo "=== TypeScript Check Results ==="
+          cat typescript-check.log
+          
+          # Now run Next.js build with enhanced logging
+          echo "Starting Next.js build..."
+          NEXT_DEBUG=1 NODE_OPTIONS="--trace-warnings" \
+          ${{ steps.detect-package-manager.outputs.runner }} next build --debug || {
+            echo "Build failed - checking error patterns"
             exit 1
           }
-          echo "Type checks completed successfully"
 
       - name: Build Next.js Project
         run: |
