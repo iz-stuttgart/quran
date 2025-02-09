@@ -74,14 +74,15 @@ jobs:
 
       - name: Build with Next.js
         run: |
-          ${{ steps.detect-package-manager.outputs.runner }} next build --debug --no-lint > build.log 2>&1 || (cat build.log && exit 1)
+          ${{ steps.detect-package-manager.outputs.runner }} next build --debug --no-lint --trace-warnings > build.log 2>&1
+          cat build.log
+          if [ $? -ne 0 ]; then
+            echo "Build failed. See error above."
+            exit 1
+          fi
         env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-      
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: ./out
+          NODE_OPTIONS: "--max-old-space-size=4096 --trace-warnings"
+          NEXT_DEBUG: true
 
   deploy:
     environment:
