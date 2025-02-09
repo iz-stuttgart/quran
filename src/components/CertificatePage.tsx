@@ -315,6 +315,8 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
     return `/${newLang}/2024-2025-S1/${urlParameter}`;
   }, [lang, urlParameter]);
 
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-gray-100 py-4 px-2 print:p-0 print:bg-white">
       {/* Controls */}
@@ -339,27 +341,51 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
         <div className="h-8 bg-gradient-to-r from-green-600 to-green-800 rounded-t-lg print:hidden" />
         
         <div className="w-full p-4" dir={textDir}>
-          {/* Header with Logos - Reduced size */}
-          <div className="flex justify-between items-center mb-4 relative">
-            <div className="absolute inset-0 flex justify-center items-center opacity-5 pointer-events-none">
-              <div className="w-32 h-32 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: "url('/institute-logo.png')" }} />
+          {/* Container for logos with centered content between them */}
+          <div className="flex justify-between items-center gap-4">
+            {/* Left Logo - Larger size */}
+            <div className="w-32 h-32 flex-shrink-0">
+              <Image 
+                src={`${base}/institute-logo.png`} 
+                alt="Institute Logo" 
+                width={128}
+                height={128}
+                className="w-full h-full object-contain z-10" 
+              />
             </div>
-            <Image src="/institute-logo.png" alt="Institute Logo" width={40} height={40} className="object-contain z-10" />
-            <h1 className={`text-xl font-bold ${textAlign} text-green-900`}>
-              {t.title} {reportData.schoolYear}
-            </h1>
-            <Image src="/quran-logo.png" alt="Quran Logo" width={40} height={40} className="object-contain z-10" />
-          </div>
-  
-          {/* Student Information - Compact */}
-          <div className="space-y-2 mb-4 bg-gray-50 p-3 rounded-lg">
-            <div className="flex items-center">
-              <span className="w-1/3 font-semibold text-gray-700 text-sm">{t.studentName[reportData.gender]}:</span>
-              <span className="w-2/3 text-base font-medium text-green-900">{reportData.studentName || ''}</span>
+            
+            {/* Center content - stacked title and student info */}
+            <div className="flex-1 flex flex-col gap-4">
+              {/* Title row */}
+              <h1 className={`text-xl font-bold text-center text-green-900`}>
+                {t.title} {reportData.schoolYear}
+              </h1>
+
+              {/* Student Info row */}
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <span className="text-base font-medium text-green-900">
+                    {reportData.studentName || ''}
+                  </span>
+                </div>
+                
+                <div className="flex items-center">
+                  <span className="text-base font-medium text-green-900">
+                    {reportData.classroom || ''}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center">
-              <span className="w-1/3 font-semibold text-gray-700 text-sm">{t.group}:</span>
-              <span className="w-2/3 text-base font-medium text-green-900">{reportData.classroom || ''}</span>
+
+            {/* Right Logo - Larger size */}
+            <div className="w-32 h-32 flex-shrink-0">
+              <Image 
+                src={`${base}/quran-logo.png`} 
+                alt="Quran Logo" 
+                width={128}
+                height={128}
+                className="w-full h-full object-contain z-10" 
+              />
             </div>
           </div>
   
