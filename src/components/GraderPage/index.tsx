@@ -22,7 +22,7 @@ const config = {
     const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
     // Remove any leading slashes from the path to avoid double slashes
     const cleanPath = path.replace(/^\//, '');
-    return `/${base}/${cleanPath}`;
+    return `${base}/${cleanPath}`;
   }
 };
 
@@ -155,7 +155,7 @@ export default function GraderPage({ lang }: GraderPageProps) {
 
       const compressed = compress(reportData);
       // Use the configuration helper to generate the correct URL
-      return config.generateUrl(`${validLang}/2024-2025-S1/?g=${compressed}`);
+      return config.generateUrl(`${validLang}/2024-2025-S1?g=${compressed}`);
     });
 
     setGeneratedLinks(links);

@@ -312,8 +312,7 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
 
   const switchLanguageHref = useMemo(() => {
     const newLang = lang === 'de' ? 'ar' : 'de';
-    const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
-    return `/${base}/${newLang}/2024-2025-S1/${urlParameter}`;
+    return `/${newLang}/2024-2025-S1/${urlParameter}`;
   }, [lang, urlParameter]);
 
   return (
