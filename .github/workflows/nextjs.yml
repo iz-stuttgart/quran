@@ -67,12 +67,14 @@ jobs:
         run: ${{ steps.detect-package-manager.outputs.manager }} ${{ steps.detect-package-manager.outputs.command }}
 
       - name: Type check
-        run: ${{ steps.detect-package-manager.outputs.runner }} tsc --noEmit --pretty
+        run: |
+          ${{ steps.detect-package-manager.outputs.runner }} tsc --noEmit --pretty --diagnostics
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
 
       - name: Build with Next.js
-        run: ${{ steps.detect-package-manager.outputs.runner }} next build --debug
+        run: |
+          ${{ steps.detect-package-manager.outputs.runner }} next build --debug --no-lint > build.log 2>&1 || (cat build.log && exit 1)
         env:
           NODE_OPTIONS: "--max-old-space-size=4096"
       
