@@ -215,12 +215,12 @@ function calculateTotalGrade(examSections: GradedExamSection[]): number | null {
   return Number((weightedSum / 100).toFixed(1));
 }
 
-interface HomePageProps {
+interface CertificatePageProps {
   lang: 'de' | 'ar';
   reportData: ReportData;
 }
 
-export default function HomePage({ lang, reportData }: HomePageProps) {
+export default function CertificatePage({ lang, reportData }: CertificatePageProps) {
   const t = translations[lang];
   const isRTL = lang === 'ar';
   const textDir = isRTL ? 'rtl' : 'ltr';

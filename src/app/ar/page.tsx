@@ -1,11 +1,6 @@
-import { Metadata } from 'next';
-import ClientPageWrapper from '@/components/ClientPageWrapper';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'التقرير السنوي',
-  description: 'صفحة التقرير السنوي باللغة العربية'
-};
-
-export default function ArabicHome() {
-  return <ClientPageWrapper lang="ar" />;
+export default function Home() {
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  redirect(`${base}/ar/grader`);
 }

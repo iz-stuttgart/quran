@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import HomePage from '@/components/HomePage';
+import HomePage from '@/components/CertificatePage';
 import { defaultData } from '@/lib/defaults';
 
 export default function ClientWrapper({ lang }: { lang: 'ar' | 'de' }) {

@@ -1,11 +1,6 @@
-import { Metadata } from 'next';
-import ClientPageWrapper from '@/components/ClientPageWrapper';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Jahresergebnis',
-  description: 'Jahresergebnis Berichtsseite'
-};
-
-export default function GermanHome() {
-  return <ClientPageWrapper lang="de" />;
+export default function Home() {
+  const base = process.env.NEXT_PUBLIC_BASE_PATH || '';
+  redirect(`${base}/de/grader`);
 }
