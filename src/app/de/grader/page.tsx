@@ -26,5 +26,6 @@ export default async function Grader({
   params 
 }: Props) {
   const { lang } = await params;
-  return <GraderPage lang={lang} />;
+  console.log(lang)
+  return <GraderPage lang="de" />;
 }
