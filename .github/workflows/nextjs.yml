@@ -74,51 +74,23 @@ jobs:
           }
           echo "Dependencies installed successfully"
 
-      - name: Detailed Type Check
+      - name: Type Check and Build
         run: |
-          echo "Running detailed type analysis..."
-          
-          # First, verify TypeScript configuration
-          echo "TypeScript configuration validation:"
-          ${{ steps.detect-package-manager.outputs.runner }} tsc --showConfig
-          
-          # Then run type checking with maximum verbosity
-          echo "Full type check with all errors:"
-          ${{ steps.detect-package-manager.outputs.runner }} tsc --noEmit \
-            --pretty --diagnostics \
-            --extendedDiagnostics \
-            --explainFiles \
-            --listFiles \
-            --traceResolution > typescript-check.log || true
-          
-          echo "=== TypeScript Check Results ==="
-          cat typescript-check.log
-          
-          # Now run Next.js build with enhanced logging
-          echo "Starting Next.js build..."
-          NEXT_DEBUG=1 NODE_OPTIONS="--trace-warnings" \
-          ${{ steps.detect-package-manager.outputs.runner }} next build --debug || {
-            echo "Build failed - checking error patterns"
+          echo "Running type checking..."
+          # Use Next.js's built-in type checking
+          ${{ steps.detect-package-manager.outputs.runner }} next typecheck --debug || {
+            echo "Type checking failed"
             exit 1
           }
-
-      - name: Build Next.js Project
-        run: |
-          echo "Running type check..."
-          # Run TypeScript compiler in watch mode to get all errors
-          ${{ steps.detect-package-manager.outputs.runner }} tsc --noEmit --pretty --diagnostics > type-check.log || true
           
-          echo "Starting Next.js build..."
-          NEXT_DEBUG=1 ${{ steps.detect-package-manager.outputs.runner }} next build --debug || {
-            echo "=== Type Check Output ==="
-            cat type-check.log
-            echo "=== Build Failed ==="
+          echo "Building project..."
+          NEXT_DEBUG=1 ${{ steps.detect-package-manager.outputs.runner }} next build || {
+            echo "Build failed"
             exit 1
           }
         env:
-          NODE_OPTIONS: "--max-old-space-size=4096 --trace-warnings"
+          NODE_OPTIONS: "--max-old-space-size=4096"
           NEXT_TELEMETRY_DISABLED: 1
-          NEXT_DEBUG: 1
 
       - name: Upload Artifacts
         uses: actions/upload-pages-artifact@v3
