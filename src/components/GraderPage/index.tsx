@@ -10,6 +10,22 @@ import GraderSidebar from './GraderSidebar';
 import GradesGrid from './GradesGrid';
 import DarkModeToggle from '../DarkModeToggle';
 
+const config = {
+  // Base path for the application
+  // In development, this might be empty
+  // In production on GitHub Pages, this would be '/quran'
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '/quran',
+  
+  // Helper function to generate correct URLs for the application
+  // This centralizes URL generation logic and makes it easier to modify paths
+  generateUrl: (path: string) => {
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || '/quran';
+    // Remove any leading slashes from the path to avoid double slashes
+    const cleanPath = path.replace(/^\//, '');
+    return `${base}/${cleanPath}`;
+  }
+};
+
 const defaultExamSections: ExamSection[] = [
   {
     name: { de: 'Memorization', ar: 'حفظ' },
@@ -138,7 +154,8 @@ export default function GraderPage({ lang }: GraderPageProps) {
       };
 
       const compressed = compress(reportData);
-      return `/${validLang}?g=${compressed}`;
+      // Use the configuration helper to generate the correct URL
+      return config.generateUrl(`${validLang}?g=${compressed}`);
     });
 
     setGeneratedLinks(links);
