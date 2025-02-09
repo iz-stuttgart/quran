@@ -1,36 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable static HTML export for GitHub Pages
   output: 'export',
+  
+  // Configure image handling for static export
   images: {
     unoptimized: true,
   },
-  // Add specific TypeScript handling
+  
+  // Configure TypeScript checking behavior
   typescript: {
-    // Force TypeScript to be strict about checking
+    // This ensures type errors are treated as errors rather than warnings
     ignoreBuildErrors: false,
-    // Tell Next.js to show all type errors
+    
+    // This tells Next.js to use your project's tsconfig.json
     tsconfigPath: './tsconfig.json'
   },
+  
+  // Configure webpack for your Node.js polyfills
   webpack: (config, { isServer }) => {
-    // Add TypeScript loader configuration
-    config.module.rules.push({
-      test: /\.tsx?$/,
-      use: [
-        {
-          loader: 'ts-loader',
-          options: {
-            // Force type checking during webpack build
-            transpileOnly: false,
-            // Show all errors
-            logLevel: "info",
-            // Enable detailed diagnostics
-            logInfoToStdOut: true
-          }
-        }
-      ]
-    });
-
-    // Your existing server-side configuration
+    // Handle Node.js modules in the browser environment
     if (isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -42,15 +31,7 @@ const nextConfig = {
     }
     
     return config;
-  },
-  // Add build phase logging
-  onError: (error) => {
-    console.error('Build phase error:', {
-      phase: error.phase,
-      message: error.message,
-      location: error.file,
-    });
-  },
-}
+  }
+};
 
 module.exports = nextConfig;
