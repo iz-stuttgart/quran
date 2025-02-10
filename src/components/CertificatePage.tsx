@@ -9,10 +9,11 @@ import { ReportData } from '@/types/report';
 import { defaultData } from "@/lib/defaults";
 import html2pdf from 'html2pdf.js';
 import { GradedExamSection } from "@/types/grader";
+import WeightedGradesTable from "@/components/WeightedGradesTable";
 
 const translations = {
   de: {
-    title: 'Erstes Semester',
+    title: 'Noten des ersten Semesters Zertifikat',
     studentName: {
       m: 'Name des Schülers',
       f: 'Name der Schülerin'
@@ -29,7 +30,7 @@ const translations = {
     print: 'Drucken'
   },
   ar: {
-    title: 'الفصل الدراسي الأول',
+    title: 'شهادة درجات الفصل الدراسي الأول',
     studentName: {
       m: 'اسم الطالب',
       f: 'اسم الطالبة'
@@ -338,97 +339,86 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
   
       {/* Report Container - Optimized for A5 */}
       <div className="max-w-[148mm] mx-auto bg-white shadow-lg print:shadow-none rounded-lg report-container">
-        <div className="h-8 bg-gradient-to-r from-green-600 to-green-800 rounded-t-lg print:hidden" />
+        {/* Top green header */}
+        <div className="h-8 bg-gradient-to-r from-green-600 to-green-800 rounded-t-lg print:rounded-none" />
         
         <div className="w-full p-4" dir={textDir}>
-          {/* Container for logos with centered content between them */}
-          <div className="flex justify-between items-center gap-4">
-            {/* Left Logo - Larger size */}
+          {/* Header section with logos and info */}
+          <div className="flex items-start gap-4 mb-6">
+            {/* Student information - always comes first in DOM order */}
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-center text-green-900 mb-4">
+                {t.title} {reportData.schoolYear}
+              </h1>
+
+              <div className="space-y-3">
+                {/* Student Name - Using flex with minimal gap */}
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-600 min-w-fit">
+                    {t.studentName[reportData.gender || 'm']}:
+                  </span>
+                  <span className="text-base font-medium text-green-900 ms-2">
+                    {reportData.studentName || ''}
+                  </span>
+                </div>
+
+                {/* Classroom - Using flex with minimal gap */}
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-600 min-w-fit">
+                    {t.group}:
+                  </span>
+                  <span className="text-base font-medium text-green-900 ms-2">
+                    {reportData.classroom || ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Logo container */}
             <div className="w-32 h-32 flex-shrink-0">
               <Image 
                 src={`${base}/institute-logo.png`} 
                 alt="Institute Logo" 
                 width={128}
                 height={128}
-                className="w-full h-full object-contain z-10" 
-              />
-            </div>
-            
-            {/* Center content - stacked title and student info */}
-            <div className="flex-1 flex flex-col gap-4">
-              {/* Title row */}
-              <h1 className={`text-xl font-bold text-center text-green-900`}>
-                {t.title} {reportData.schoolYear}
-              </h1>
-
-              {/* Student Info row */}
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
-                <div className="flex items-center">
-                  <span className="text-base font-medium text-green-900">
-                    {reportData.studentName || ''}
-                  </span>
-                </div>
-                
-                <div className="flex items-center">
-                  <span className="text-base font-medium text-green-900">
-                    {reportData.classroom || ''}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Logo - Larger size */}
-            <div className="w-32 h-32 flex-shrink-0">
-              <Image 
-                src={`${base}/quran-logo.png`} 
-                alt="Quran Logo" 
-                width={128}
-                height={128}
-                className="w-full h-full object-contain z-10" 
+                className="w-full h-full object-contain" 
               />
             </div>
           </div>
   
-          {/* Evaluation Table - Compact rows */}
-          <div className="overflow-hidden rounded-lg border border-gray-200 mb-4">
-            <table className="w-full border-collapse bg-white">
-              <thead>
-                <tr className="bg-gradient-to-r from-gray-50 to-gray-100">
-                  <th className={`p-2 border-b border-gray-200 ${textAlign} text-gray-700 text-sm`}>{t.evaluationTitle}</th>
-                  <th className={`p-2 border-b border-gray-200 ${textAlign} w-16 text-gray-700 text-sm`}>{t.percentage}</th>
-                  <th className={`p-2 border-b border-gray-200 ${textAlign} w-16 text-gray-700 text-sm`}>{t.studentGrade}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportData.examSections.map((section, index) => (
-                  <tr key={index} className="hover:bg-green-50">
-                    <td className="p-2 border-b border-gray-200 text-sm">{section.name[lang]}</td>
-                    <td className="p-2 border-b border-gray-200 text-center text-sm">{section.weight}%</td>
-                    <td className="p-2 border-b border-gray-200 text-center font-medium text-sm">{section.grade?.toFixed(1) || ''}</td>
-                  </tr>
-                ))}
-                <tr className="font-bold bg-green-50">
-                  <td colSpan={2} className="p-2 border-t-2 border-green-200 text-sm">{t.totalGrade}</td>
-                  <td className="p-2 border-t-2 border-green-200 text-center text-green-900 text-sm">{totalGrade?.toFixed(1) || ''}</td>
-                </tr>
-              </tbody>
-            </table>
+          {/* Rest of the component remains the same */}
+          <div className="mb-4">
+            <WeightedGradesTable 
+              examSections={reportData.examSections}
+              lang={lang}
+            />
           </div>
   
-          {/* Notes Section - Reduced height */}
           <div className="mb-4 bg-gray-50 p-3 rounded-lg">
             <p className="font-semibold text-gray-700 mb-1 text-sm">{t.notes}:</p>
             <div className="min-h-8 bg-white p-2 rounded border border-gray-200 text-sm">
               {reportData.notes || ''}
             </div>
           </div>
-  
-          {/* Date Section - Compact */}
-          <div className={`${textAlign} bg-gray-50 p-2 rounded-lg`}>
-            <p className="font-semibold text-gray-700 mb-1 text-sm">{t.date}:</p>
-            <p className="text-green-900 text-sm">{formattedDate}</p>
+
+          <div className={`grid grid-cols-2 gap-8 mb-4 ${textAlign}`}>
+            <div className="flex flex-col">
+              <div className="h-16 border-b border-gray-300"></div>
+              <p className="mt-1 text-sm text-gray-600">
+                {lang === 'de' ? 'Unterschrift der Lehrkraft' : 'توقيع المعلم'}
+              </p>
+            </div>
+
+            <div className="flex flex-col">
+              <div className="h-16 border-b border-gray-300"></div>
+              <p className="mt-1 text-sm text-gray-600">
+                {lang === 'de' ? 'Unterschrift der Eltern' : 'توقيع ولي الأمر'}
+              </p>
+            </div>
           </div>
         </div>
+
+        <div className="h-8 bg-gradient-to-r from-green-600 to-green-800 rounded-b-lg print:rounded-none" />
       </div>
     </div>
   );
