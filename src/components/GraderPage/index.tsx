@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Menu, X } from 'lucide-react';
 import { compress } from '@/lib/compression';
@@ -9,6 +9,7 @@ import { ExamSection, Student, ValidationErrors } from '@/types/grader';
 import GraderSidebar from './GraderSidebar';
 import GradesGrid from './GradesGrid';
 import DarkModeToggle from '../DarkModeToggle';
+import { clearLocalStorage, loadFromLocalStorage, saveToLocalStorage } from '@/lib/storage';
 
 const config = {
   // Base path for the application
@@ -56,7 +57,9 @@ const translations = {
       weightsSum: 'Die Summe der Gewichtungen muss 100% ergeben',
       requiredField: 'Pflichtfeld',
       invalidGrade: 'Note muss zwischen 1 und 6 liegen'
-    }
+    },
+    reset: 'Alle Daten zurücksetzen',
+    resetConfirmation: 'Sind Sie sicher, dass Sie alle Daten zurücksetzen möchten? Dies kann nicht rückgängig gemacht werden.',
   },
   ar: {
     title: 'إدخال الدرجات',
@@ -68,7 +71,9 @@ const translations = {
       weightsSum: 'مجموع النسب يجب أن يساوي 100%',
       requiredField: 'حقل إجباري',
       invalidGrade: 'الدرجة يجب أن تكون بين 1 و 6'
-    }
+    },
+    reset: 'إعادة تعيين جميع البيانات',
+    resetConfirmation: 'هل أنت متأكد أنك تريد إعادة تعيين جميع البيانات؟ لا يمكن التراجع عن هذا الإجراء.',
   }
 } as const;
 
@@ -176,6 +181,47 @@ export default function GraderPage({ lang }: GraderPageProps) {
     />
   );
 
+  // Reset function to clear all data
+  const handleReset = () => {
+    const confirmReset = window.confirm(
+      t.resetConfirmation || 'Are you sure you want to reset all data? This cannot be undone.'
+    );
+    
+    if (confirmReset) {
+      clearLocalStorage();
+      setSchoolYear(new Date().getFullYear().toString());
+      setClassroom('');
+      setExamDate(new Date().toISOString().split('T')[0]);
+      setExamSections(defaultExamSections);
+      setStudents([]);
+      setGeneratedLinks([]);
+      setErrors({});
+    }
+  };
+
+  // Load data from localStorage on component mount
+  useEffect(() => {
+    const storedData = loadFromLocalStorage();
+    if (storedData) {
+      setSchoolYear(storedData.schoolYear);
+      setClassroom(storedData.classroom);
+      setExamDate(storedData.examDate);
+      setExamSections(storedData.examSections);
+      setStudents(storedData.students);
+    }
+  }, []);
+
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    saveToLocalStorage({
+      schoolYear,
+      classroom,
+      examDate,
+      examSections,
+      students
+    });
+  }, [schoolYear, classroom, examDate, examSections, students]);
+
   return (
     <div className="min-h-screen bg-gray-100" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
@@ -193,7 +239,15 @@ export default function GraderPage({ lang }: GraderPageProps) {
               </button>
               <h1 className="text-xl font-semibold text-gray-900 mx-4">{t.title}</h1>
             </div>
-            <DarkModeToggle />
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleReset}
+                className="px-4 py-2 text-sm font-medium text-red-600 hover:text-red-700 border border-red-300 rounded-md hover:bg-red-50"
+              >
+                {t.reset || 'Reset All Data'}
+              </button>
+              <DarkModeToggle />
+            </div>
           </div>
         </div>
       </header>
