@@ -10,6 +10,7 @@ import GraderSidebar from './GraderSidebar';
 import GradesGrid from './GradesGrid';
 import DarkModeToggle from '../DarkModeToggle';
 import { clearLocalStorage, loadFromLocalStorage, saveToLocalStorage } from '@/lib/storage';
+import { defaultExamSections } from '@/lib/defaults';
 
 const config = {
   // Base path for the application
@@ -26,25 +27,6 @@ const config = {
     return `${base}/${cleanPath}`;
   }
 };
-
-const defaultExamSections: ExamSection[] = [
-  {
-    name: { de: 'Memorization', ar: 'حفظ' },
-    weight: 40
-  },
-  {
-    name: { de: 'Recent Review', ar: 'مراجعة قريبة' },
-    weight: 30
-  },
-  {
-    name: { de: 'Past Review', ar: 'مراجعة بعيدة' },
-    weight: 20
-  },
-  {
-    name: { de: 'Attendance', ar: 'حضور' },
-    weight: 10
-  }
-];
 
 const translations = {
   de: {
