@@ -8,7 +8,6 @@ import { useMemo } from 'react';
 import { ReportData } from '@/types/report';
 import { defaultData } from "@/lib/defaults";
 import html2pdf from 'html2pdf.js';
-import { GradedExamSection } from "@/types/grader";
 import WeightedGradesTable from "@/components/WeightedGradesTable";
 
 const translations = {
@@ -48,20 +47,7 @@ const translations = {
   }
 } as const;
 
-interface StyleSheet extends HTMLStyleElement {
-  innerHTML: string;
-}
-
-interface Html2CanvasOptions {
-  scale: number;
-  useCORS: boolean;
-  backgroundColor: string;
-  ignoreElements: (element: HTMLElement) => boolean;
-  logging: boolean;
-  letterRendering: boolean;
-}
-
-const handleDownload = (reportData: ReportData) => {
+const handleDownload = async (reportData: ReportData) => {
   const element = document.querySelector('.report-container');
   
   if (!element) return;
@@ -81,144 +67,33 @@ const handleDownload = (reportData: ReportData) => {
     return `report_${sanitizeForFileName(className)}_${sanitizeForFileName(studentName)}_${currentDate}.pdf`;
   };
 
-  // Configure options to preserve content while removing print artifacts
+  const fileName = formatFileName();
+
+  // Basic options focusing on essential settings
   const opt = {
-    margin: 0.5,
-    filename: formatFileName(),
-    image: {
-      type: 'jpeg',
-      quality: 1
-    },
+    margin: 10,
+    filename: fileName,
+    image: { type: 'jpeg' },
     html2canvas: {
       scale: 2,
       useCORS: true,
-      backgroundColor: '#ffffff',
-      ignoreElements: (element: HTMLElement) => {
-        return element.classList.contains('print-only') || 
-               element.tagName === 'HEADER' || 
-               element.tagName === 'FOOTER';
-      },
-      logging: true,
-      letterRendering: true
-    } as Html2CanvasOptions,
+      backgroundColor: '#ffffff'
+    },
     jsPDF: {
-      unit: 'in',
+      unit: 'mm',
       format: 'a5',
-      orientation: 'portrait' as const,
-      marginTop: 0.1,
-      marginBottom: 0.1,
-      marginLeft: 0.1,
-      marginRight: 0.1,
-      putOnlyUsedFonts: true
+      orientation: 'portrait' as 'portrait' | 'landscape'
     }
   };
 
-  // Before generating the PDF, temporarily modify any print-specific styles
-  const originalStyles = new Map<StyleSheet, string>();
-  const printStyles = document.querySelectorAll<StyleSheet>('style, link[rel="stylesheet"]');
-  
-  printStyles.forEach((styleSheet: StyleSheet) => {
-    if (styleSheet instanceof HTMLStyleElement) {
-      originalStyles.set(styleSheet, styleSheet.innerHTML);
-      styleSheet.innerHTML = styleSheet.innerHTML
-        .replace(/@page[^{]*{[^}]*}/g, '')
-        .replace(/@media\s+print[^{]*{[^}]*}/g, '');
-    }
-  });
-
-  // Generate the PDF with preserved content
-  html2pdf()
-    .set(opt)
-    .from(element as HTMLElement)
-    .save()
-    .then(() => {
-      // Restore original styles
-      printStyles.forEach((styleSheet: StyleSheet) => {
-        if (styleSheet instanceof HTMLStyleElement) {
-          styleSheet.innerHTML = originalStyles.get(styleSheet) || '';
-        }
-      });
-    })
-    .catch((error: Error) => {
-      console.error('PDF generation failed:', error);
-      // Make sure to restore styles even if PDF generation fails
-      printStyles.forEach((styleSheet: StyleSheet) => {
-        if (styleSheet instanceof HTMLStyleElement) {
-          styleSheet.innerHTML = originalStyles.get(styleSheet) || '';
-        }
-      });
-    });
-};
-
-function formatDate(dateStr: string, lang: 'de' | 'ar'): string {
-  const date = new Date(dateStr);
-  
-  // Common options for both calendars
-  const fullOptions: Intl.DateTimeFormatOptions = {
-    weekday: 'long' as const,
-    year: 'numeric' as const,
-    month: 'long' as const,
-    day: 'numeric' as const
-  };
-
-  // Options without weekday for secondary date
-  const dateOnlyOptions: Intl.DateTimeFormatOptions = {
-    year: 'numeric' as const,
-    month: 'long' as const,
-    day: 'numeric' as const
-  };
-
-  if (lang === 'de') {
-    // German formatting
-    const gregorianFormatter = new Intl.DateTimeFormat('de-DE', fullOptions);
-    const gregorianParts = gregorianFormatter.formatToParts(date);
-    let gregorianDate = '';
-
-    // Secondary (Hijri) date without weekday
-    const hijriFormatter = new Intl.DateTimeFormat('de-DE-u-ca-islamic-umalqura', dateOnlyOptions);
-    const hijriParts = hijriFormatter.formatToParts(date);
-    let hijriDate = '';
-
-    gregorianParts.forEach(part => {
-      if (part.type === 'weekday') gregorianDate += part.value + ', ';
-      else if (part.type === 'day') gregorianDate += part.value + '. ';
-      else if (part.type === 'month') gregorianDate += part.value + ' ';
-      else if (part.type === 'year') gregorianDate += part.value;
-    });
-
-    hijriParts.forEach(part => {
-      if (part.type === 'day') hijriDate += part.value + '. ';
-      else if (part.type === 'month') hijriDate += part.value + ' ';
-      else if (part.type === 'year') hijriDate += part.value;
-    });
-
-    return `${gregorianDate} (${hijriDate} AH)`;
-  } else {
-    // Arabic formatting
-    const hijriFormatter = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', fullOptions);
-    const hijriParts = hijriFormatter.formatToParts(date);
-    let hijriDate = '';
-
-    const gregorianFormatter = new Intl.DateTimeFormat('ar', dateOnlyOptions);
-    const gregorianParts = gregorianFormatter.formatToParts(date);
-    let gregorianDate = '';
-
-    hijriParts.forEach(part => {
-      if (part.type === 'weekday') hijriDate += part.value + '، ';
-      else if (['day', 'month', 'year'].includes(part.type)) hijriDate += part.value + ' ';
-      else if (part.type === 'literal' && part.value !== '، ') hijriDate += part.value;
-    });
-    hijriDate = hijriDate.trim() + ' هـ';
-
-    gregorianParts.forEach(part => {
-      if (['day', 'month', 'year'].includes(part.type)) gregorianDate += part.value + ' ';
-      else if (part.type === 'literal' && part.value !== '، ') gregorianDate += part.value;
-    });
-    gregorianDate = gregorianDate.trim() + ' م';
-
-    return `${hijriDate} الموافق ${gregorianDate}`;
+  try {
+    // Create and save PDF
+    const worker = html2pdf().from(element as HTMLElement).set(opt);
+    await worker.save();
+  } catch (error) {
+    console.error('PDF generation error:', error);
   }
-}
+};
 
 function compress(data: ReportData): string {
   try {
@@ -257,24 +132,6 @@ function compress(data: ReportData): string {
   }
 }
 
-function calculateTotalGrade(examSections: GradedExamSection[]): number | null {
-  const validGrades = examSections.every(section =>
-    typeof section.grade === 'number' &&
-    section.grade >= 1 &&
-    section.grade <= 6
-  );
-
-  if (!validGrades) return null;
-
-  const totalWeight = examSections.reduce((sum, section) => sum + section.weight, 0);
-  if (totalWeight !== 100) return null;
-
-  const weightedSum = examSections.reduce((sum, section) =>
-    sum + (section.grade! * section.weight), 0);
-
-  return Number((weightedSum / 100).toFixed(1));
-}
-
 interface CertificatePageProps {
   lang: 'de' | 'ar';
   reportData: ReportData;
@@ -285,13 +142,6 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
   const isRTL = lang === 'ar';
   const textDir = isRTL ? 'rtl' : 'ltr';
   const textAlign = isRTL ? 'text-right' : 'text-left';
-
-  const totalGrade = calculateTotalGrade(reportData.examSections);
-
-  const formattedDate = useMemo(() =>
-    formatDate(reportData.date, lang),
-    [reportData.date, lang]
-  );
 
   const handlePrint = () => {
     window.print();
@@ -348,7 +198,9 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
             {/* Student information - always comes first in DOM order */}
             <div className="flex-1">
               <h1 className="text-xl font-bold text-center text-green-900 mb-4">
-                {t.title} {reportData.schoolYear}
+                {t.title}
+                <br/>
+                {reportData.schoolYear}
               </h1>
 
               <div className="space-y-3">
