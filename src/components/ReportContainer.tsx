@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import HomePage from '@/components/CertificatePage';
+import CertificatePage from '@/components/CertificatePage';
 import { decompress } from '@/lib/compression';
 import { defaultData } from '@/lib/defaults';
 
@@ -15,7 +15,7 @@ function ReportContent({ lang }: { lang: 'ar' | 'de' }) {
     ? decompress(gParam) || defaultData
     : defaultData;
 
-  return <HomePage lang={lang} reportData={reportData} />;
+  return <CertificatePage lang={lang} reportData={reportData} />;
 }
 
 export default function ReportContainer({ lang }: { lang: 'ar' | 'de' }) {

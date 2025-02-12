@@ -2,13 +2,13 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Download,Printer } from "lucide-react";
+import { Printer } from "lucide-react";
 import pako from 'pako';
 import { useMemo } from 'react';
 import { ReportData } from '@/types/report';
 import { defaultData } from "@/lib/defaults";
-import html2pdf from 'html2pdf.js';
 import WeightedGradesTable from "@/components/WeightedGradesTable";
+import dynamic from "next/dynamic";
 
 const translations = {
   de: {
@@ -47,53 +47,9 @@ const translations = {
   }
 } as const;
 
-const handleDownload = async (reportData: ReportData) => {
-  const element = document.querySelector('.report-container');
-  
-  if (!element) return;
-
-  const formatFileName = () => {
-    const className = reportData.classroom?.trim() || 'no-class';
-    const studentName = reportData.studentName?.trim() || 'unnamed';
-    
-    const sanitizeForFileName = (str: string) => {
-      return str
-        .replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .toLowerCase();
-    };
-
-    const currentDate = new Date().toISOString().split('T')[0];
-    return `report_${sanitizeForFileName(className)}_${sanitizeForFileName(studentName)}_${currentDate}.pdf`;
-  };
-
-  const fileName = formatFileName();
-
-  // Basic options focusing on essential settings
-  const opt = {
-    margin: 10,
-    filename: fileName,
-    image: { type: 'jpeg' },
-    html2canvas: {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#ffffff'
-    },
-    jsPDF: {
-      unit: 'mm',
-      format: 'a5',
-      orientation: 'portrait' as 'portrait' | 'landscape'
-    }
-  };
-
-  try {
-    // Create and save PDF
-    const worker = html2pdf().from(element as HTMLElement).set(opt);
-    await worker.save();
-  } catch (error) {
-    console.error('PDF generation error:', error);
-  }
-};
+const PDFGenerator = dynamic(() => import('@/components/GraderPage/PDFGenerator'), {
+  ssr: false // This ensures the component only loads on the client side
+});
 
 function compress(data: ReportData): string {
   try {
@@ -177,10 +133,7 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
             <Printer size={16} />
             <span>{t.print}</span>
           </button>
-          <button onClick={() => handleDownload(reportData)} className="bg-green-600 text-white px-2 py-1 text-sm rounded-md hover:bg-green-700 flex items-center gap-1 shadow-md">
-            <Download size={16} />
-            <span>{t.download}</span>
-          </button>
+          <PDFGenerator reportData={reportData} buttonText={t.download} />
         </div>
         <Link href={switchLanguageHref} className="mr-2 rounded-md border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50">
           {t.switchLang}

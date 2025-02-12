@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
-import Papa from 'papaparse';
-import { Dialog } from '@headlessui/react';
+import { parse } from 'csv-parse/sync';
+import { Dialog, Tab } from '@headlessui/react';
 import { Menu, X } from 'lucide-react';
 import { compress } from '@/lib/compression';
 import { ReportData } from '@/types/report';
@@ -10,6 +10,7 @@ import { ExamSection, Student, ValidationErrors } from '@/types/grader';
 import GraderSidebar from './GraderSidebar';
 import GradesGrid from './GradesGrid';
 import DarkModeToggle from '../DarkModeToggle';
+import CertificatePage from '@/components/CertificatePage';
 import { clearLocalStorage, loadFromLocalStorage, saveToLocalStorage } from '@/lib/storage';
 import { defaultExamSections } from '@/lib/defaults';
 
@@ -34,7 +35,7 @@ const translations = {
     title: 'Noteneingabe',
     sidebarTitle: 'Klassendaten',
     toggleSidebar: 'Seitenleiste ein-/ausblenden',
-    generate: 'Links generieren',
+    generate: 'Zertifikate erstellen',
     results: 'Generierte Links',
     validation: {
       weightsSum: 'Die Summe der Gewichtungen muss 100% ergeben',
@@ -49,7 +50,7 @@ const translations = {
     title: 'إدخال الدرجات',
     sidebarTitle: 'بيانات الفصل',
     toggleSidebar: 'إظهار/إخفاء القائمة الجانبية',
-    generate: 'توليد الروابط',
+    generate: 'إنشاء الشهادات',
     results: 'الروابط المولدة',
     validation: {
       weightsSum: 'مجموع النسب يجب أن يساوي 100%',
@@ -64,6 +65,15 @@ const translations = {
 
 interface GraderPageProps {
   lang: 'de' | 'ar';
+}
+
+interface CSVRow {
+  [studentNameColumn: string]: string;  // The student name column can have any header
+}
+
+interface ParsedCSVRow extends CSVRow {
+  // This ensures TypeScript knows all properties are strings
+  [key: string]: string;
 }
 
 export default function GraderPage({ lang }: GraderPageProps) {
@@ -207,57 +217,92 @@ export default function GraderPage({ lang }: GraderPageProps) {
     });
   }, [schoolYear, classroom, examDate, examSections, students]);
 
-  // In index.tsx, update the handleFileImport function:
+  const generateId = () => {
+    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  };
+  
   const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
+  
     try {
       const fileContent = await file.text();
-
-      Papa.parse(fileContent, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          // Get all headers except the first (name) column
-          const headers = results.meta.fields ?? [];
-          const sectionHeaders = headers.slice(1);
-          const sectionCount = sectionHeaders.length;
-          const sectionWeight = Math.floor(100 / sectionCount);
-
-          // Create exam sections
-          const newExamSections: ExamSection[] = sectionHeaders.map((header, index) => ({
-            name: {
-              de: header,
-              ar: header
-            },
-            weight: index === sectionCount - 1 ?
-              100 - (sectionWeight * (sectionCount - 1)) :
-              sectionWeight
-          }));
-
-          // Create students from CSV data
-          const newStudents: Student[] = results.data.map((row: any) => {
-            const grades: Record<string, number> = {};
-            sectionHeaders.forEach(header => {
-              grades[header] = Number(row[header]);
-            });
-
-            return {
-              id: crypto.randomUUID(),
-              name: row[headers[0]],
-              gender: 'm',
-              grades,
-              notes: ''
-            };
-          });
-
-          setExamSections(newExamSections);
-          setStudents(newStudents);
+      
+      // Parse the CSV content without type parameter
+      const records = parse(fileContent, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+        cast: true
+      }) as ParsedCSVRow[]; // Type assertion after parsing
+      
+      // Type checking for parsed records
+      if (!Array.isArray(records) || records.length === 0) {
+        throw new Error('No valid records found in CSV file');
+      }
+  
+      // Get headers with type safety
+      const headers = Object.keys(records[0]);
+      if (headers.length === 0) {
+        throw new Error('No headers found in CSV file');
+      }
+  
+      const sectionHeaders = headers.slice(1);
+      const sectionCount = sectionHeaders.length;
+      const sectionWeight = Math.floor(100 / sectionCount);
+  
+      // Create exam sections with proper typing
+      const newExamSections: ExamSection[] = sectionHeaders.map((header, index) => ({
+        name: {
+          de: header,
+          ar: header
+        },
+        weight: index === sectionCount - 1 
+          ? 100 - (sectionWeight * (sectionCount - 1)) 
+          : sectionWeight
+      }));
+  
+      // Transform CSV records into student data with type checking
+      const newStudents: Student[] = records.map((row) => {
+        // Validate row structure
+        if (!row[headers[0]]) {
+          throw new Error('Missing student name in row');
         }
+  
+        // Create grades object with explicit type
+        const grades: Record<string, number> = {};
+        
+        // Process each grade column
+        sectionHeaders.forEach(header => {
+          // Convert string grade to number, with validation
+          const gradeValue = parseFloat(row[header]);
+          if (isNaN(gradeValue)) {
+            throw new Error(`Invalid grade value in column ${header} for student ${row[headers[0]]}`);
+          }
+          if (gradeValue < 1 || gradeValue > 6) {
+            throw new Error(`Grade value must be between 1 and 6 in column ${header} for student ${row[headers[0]]}`);
+          }
+          grades[header] = gradeValue;
+        });
+  
+        return {
+          id: generateId(),
+          name: row[headers[0]].trim(),
+          gender: 'm' as const, // Using const assertion for literal type
+          grades,
+          notes: ''
+        };
       });
+  
+      setExamSections(newExamSections);
+      setStudents(newStudents);
+      
     } catch (error) {
-      console.error('Error reading file:', error);
+      console.error('Error processing file:', error);
+      alert(error instanceof Error 
+        ? `Error processing CSV: ${error.message}` 
+        : 'An unexpected error occurred while processing the CSV file'
+      );
     }
   };
 
@@ -374,24 +419,47 @@ export default function GraderPage({ lang }: GraderPageProps) {
               </label>
             </div>
 
-            {/* Generated links section */}
+            {/* Certificates Tabs */}
             {generatedLinks.length > 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-semibold mb-4">{t.results}</h2>
-                <ul className="space-y-2">
-                  {generatedLinks.map((link, index) => (
-                    <li key={index}>
-                      <a
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
+              <div className="bg-white rounded-lg shadow-sm">
+                <Tab.Group>
+                  <Tab.List className="flex space-x-1 border-b border-gray-200 px-4">
+                    {students.map((student) => (
+                      <Tab
+                        key={student.id}
+                        className={({ selected }) =>
+                          `px-4 py-2 text-sm font-medium border-b-2 ${selected
+                            ? 'border-blue-500 text-blue-600'
+                            : 'border-transparent text-gray-500 hover:text-gray-700'
+                          }`
+                        }
                       >
-                        {students[index].name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+                        {student.name}
+                      </Tab>
+                    ))}
+                  </Tab.List>
+                  <Tab.Panels>
+                    {students.map((student) => (
+                      <Tab.Panel key={student.id}>
+                        <CertificatePage
+                          lang={validLang}
+                          reportData={{
+                            schoolYear,
+                            studentName: student.name,
+                            classroom,
+                            gender: student.gender,
+                            examSections: examSections.map(section => ({
+                              ...section,
+                              grade: student.grades[section.name.de]
+                            })),
+                            date: examDate,
+                            notes: student.notes
+                          }}
+                        />
+                      </Tab.Panel>
+                    ))}
+                  </Tab.Panels>
+                </Tab.Group>
               </div>
             )}
           </main>

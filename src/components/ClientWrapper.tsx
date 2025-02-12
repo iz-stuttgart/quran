@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import HomePage from '@/components/CertificatePage';
+import CertificatePage from '@/components/CertificatePage';
 import { defaultData } from '@/lib/defaults';
 
 export default function ClientWrapper({ lang }: { lang: 'ar' | 'de' }) {
@@ -25,5 +25,5 @@ export default function ClientWrapper({ lang }: { lang: 'ar' | 'de' }) {
     }
   }, []);
 
-  return <HomePage lang={lang} reportData={reportData} />;
+  return <CertificatePage lang={lang} reportData={reportData} />;
 }
