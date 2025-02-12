@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useState } from 'react';
+import Papa from 'papaparse';
 import { Dialog } from '@headlessui/react';
 import { Menu, X } from 'lucide-react';
 import { compress } from '@/lib/compression';
@@ -17,7 +18,7 @@ const config = {
   // In development, this might be empty
   // In production on GitHub Pages, this would be '/quran'
   basePath: process.env.NEXT_PUBLIC_BASE_PATH || '/quran',
-  
+
   // Helper function to generate correct URLs for the application
   // This centralizes URL generation logic and makes it easier to modify paths
   generateUrl: (path: string) => {
@@ -42,6 +43,7 @@ const translations = {
     },
     reset: 'Alle Daten zurücksetzen',
     resetConfirmation: 'Sind Sie sicher, dass Sie alle Daten zurücksetzen möchten? Dies kann nicht rückgängig gemacht werden.',
+    import: 'CSV importieren',
   },
   ar: {
     title: 'إدخال الدرجات',
@@ -56,6 +58,7 @@ const translations = {
     },
     reset: 'إعادة تعيين جميع البيانات',
     resetConfirmation: 'هل أنت متأكد أنك تريد إعادة تعيين جميع البيانات؟ لا يمكن التراجع عن هذا الإجراء.',
+    import: 'استيراد CSV',
   }
 } as const;
 
@@ -67,7 +70,7 @@ export default function GraderPage({ lang }: GraderPageProps) {
   const validLang = lang === 'de' ? 'de' : 'ar';
   const t = translations[validLang];
   const isRTL = validLang === 'ar';
-  
+
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [schoolYear, setSchoolYear] = useState(new Date().getFullYear().toString());
   const [classroom, setClassroom] = useState('');
@@ -79,16 +82,16 @@ export default function GraderPage({ lang }: GraderPageProps) {
 
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {};
-    
+
     const totalWeight = examSections.reduce((sum, section) => sum + section.weight, 0);
     if (totalWeight !== 100) {
       newErrors.weights = t.validation.weightsSum;
     }
-    
+
     if (!schoolYear) newErrors.schoolYear = t.validation.requiredField;
     if (!classroom) newErrors.classroom = t.validation.requiredField;
     if (!examDate) newErrors.examDate = t.validation.requiredField;
-    
+
     students.forEach(student => {
       if (!student.name.trim()) {
         newErrors[`name-${student.id}`] = t.validation.requiredField;
@@ -103,7 +106,7 @@ export default function GraderPage({ lang }: GraderPageProps) {
         }
       });
     });
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -118,7 +121,7 @@ export default function GraderPage({ lang }: GraderPageProps) {
         }
       }
     });
-    
+
     setErrors(newErrors);
     setStudents(newStudents);
   };
@@ -168,7 +171,7 @@ export default function GraderPage({ lang }: GraderPageProps) {
     const confirmReset = window.confirm(
       t.resetConfirmation || 'Are you sure you want to reset all data? This cannot be undone.'
     );
-    
+
     if (confirmReset) {
       clearLocalStorage();
       setSchoolYear(new Date().getFullYear().toString());
@@ -203,6 +206,60 @@ export default function GraderPage({ lang }: GraderPageProps) {
       students
     });
   }, [schoolYear, classroom, examDate, examSections, students]);
+
+  // In index.tsx, update the handleFileImport function:
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const fileContent = await file.text();
+
+      Papa.parse(fileContent, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          // Get all headers except the first (name) column
+          const headers = results.meta.fields ?? [];
+          const sectionHeaders = headers.slice(1);
+          const sectionCount = sectionHeaders.length;
+          const sectionWeight = Math.floor(100 / sectionCount);
+
+          // Create exam sections
+          const newExamSections: ExamSection[] = sectionHeaders.map((header, index) => ({
+            name: {
+              de: header,
+              ar: header
+            },
+            weight: index === sectionCount - 1 ?
+              100 - (sectionWeight * (sectionCount - 1)) :
+              sectionWeight
+          }));
+
+          // Create students from CSV data
+          const newStudents: Student[] = results.data.map((row: any) => {
+            const grades: Record<string, number> = {};
+            sectionHeaders.forEach(header => {
+              grades[header] = Number(row[header]);
+            });
+
+            return {
+              id: crypto.randomUUID(),
+              name: row[headers[0]],
+              gender: 'm',
+              grades,
+              notes: ''
+            };
+          });
+
+          setExamSections(newExamSections);
+          setStudents(newStudents);
+        }
+      });
+    } catch (error) {
+      console.error('Error reading file:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -247,9 +304,8 @@ export default function GraderPage({ lang }: GraderPageProps) {
         {/* Dialog position */}
         <div className="fixed inset-0 flex">
           <Dialog.Panel
-            className={`relative flex-1 flex flex-col w-full max-w-xs bg-white focus:outline-none ${
-              isRTL ? 'mr-auto' : 'ml-auto'
-            }`}
+            className={`relative flex-1 flex flex-col w-full max-w-xs bg-white focus:outline-none ${isRTL ? 'mr-auto' : 'ml-auto'
+              }`}
           >
             {/* Close button */}
             <div className="absolute top-0 right-0 pt-4 pr-4">
@@ -298,13 +354,25 @@ export default function GraderPage({ lang }: GraderPageProps) {
               />
             </div>
 
-            {/* Generate button */}
-            <button
-              onClick={generateReportLinks}
-              className="w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
-            >
-              {t.generate}
-            </button>
+            {/* Buttons */}
+            <div className="flex gap-4">
+              <button
+                onClick={generateReportLinks}
+                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+              >
+                {t.generate}
+              </button>
+
+              <label className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 cursor-pointer">
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={handleFileImport}
+                />
+                {t.import}
+              </label>
+            </div>
 
             {/* Generated links section */}
             {generatedLinks.length > 0 && (
