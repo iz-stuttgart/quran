@@ -13,6 +13,7 @@ import DarkModeToggle from '../DarkModeToggle';
 import CertificatePage from '@/components/CertificatePage';
 import { clearLocalStorage, loadFromLocalStorage, saveToLocalStorage } from '@/lib/storage';
 import { defaultExamSections } from '@/lib/defaults';
+import { FileImport } from './FileImport';
 
 const config = {
   // Base path for the application
@@ -44,7 +45,10 @@ const translations = {
     },
     reset: 'Alle Daten zurücksetzen',
     resetConfirmation: 'Sind Sie sicher, dass Sie alle Daten zurücksetzen möchten? Dies kann nicht rückgängig gemacht werden.',
-    import: 'CSV importieren',
+    import: {
+      csv: 'CSV importieren',
+      xlsx: 'XLSX importieren'
+    }
   },
   ar: {
     title: 'إدخال الدرجات',
@@ -59,7 +63,10 @@ const translations = {
     },
     reset: 'إعادة تعيين جميع البيانات',
     resetConfirmation: 'هل أنت متأكد أنك تريد إعادة تعيين جميع البيانات؟ لا يمكن التراجع عن هذا الإجراء.',
-    import: 'استيراد CSV',
+    import: {
+      csv: 'استيراد CSV',
+      xlsx: 'استيراد XLSX'
+    }
   }
 } as const;
 
@@ -408,15 +415,17 @@ export default function GraderPage({ lang }: GraderPageProps) {
                 {t.generate}
               </button>
 
-              <label className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 cursor-pointer">
-                <input
-                  type="file"
-                  accept=".csv"
-                  className="hidden"
-                  onChange={handleFileImport}
-                />
-                {t.import}
-              </label>
+              <FileImport
+                onCsvImport={handleFileImport}
+                onXlsxImport={(sections, students) => {
+                  setExamSections(sections);
+                  setStudents(students);
+                }}
+                translations={{
+                  importCsv: t.import.csv,
+                  importXlsx: t.import.xlsx
+                }}
+              />
             </div>
 
             {/* Certificates Tabs */}
