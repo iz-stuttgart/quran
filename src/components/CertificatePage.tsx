@@ -26,7 +26,11 @@ const translations = {
     date: 'Datum',
     switchLang: 'العربية',
     download: 'Als PDF herunterladen',
-    print: 'Drucken'
+    print: 'Drucken',
+    attendance: {
+      label: 'Anwesenheit',
+      description: 'Besuchte/Gesamte Unterrichtsstunden'
+    }
   },
   ar: {
     title: 'شهادة درجات الفصل الدراسي الأول',
@@ -43,7 +47,11 @@ const translations = {
     date: 'التاريخ',
     switchLang: 'Deutsch',
     download: 'تحميل كملف PDF',
-    print: 'طباعة'
+    print: 'طباعة',
+    attendance: {
+      label: 'الحضور',
+      description: 'الحصص المحضورة/إجمالي الحصص'
+    }
   }
 } as const;
 
@@ -139,12 +147,12 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
           {t.switchLang}
         </Link>
       </div>
-  
+
       {/* Report Container - Optimized for A5 */}
       <div className="max-w-[148mm] mx-auto bg-white shadow-lg print:shadow-none rounded-lg report-container">
         {/* Top green header */}
         <div className="h-8 bg-gradient-to-r from-green-600 to-green-800 rounded-t-lg print:rounded-none" />
-        
+
         <div className="w-full p-4" dir={textDir}>
           {/* Header section with logos and info */}
           <div className="flex items-start gap-4 mb-6">
@@ -152,7 +160,7 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
             <div className="flex-1">
               <h1 className="text-xl font-bold text-center text-green-900 mb-4">
                 {t.title}
-                <br/>
+                <br />
                 {reportData.schoolYear}
               </h1>
 
@@ -178,27 +186,27 @@ export default function CertificatePage({ lang, reportData }: CertificatePagePro
                 </div>
               </div>
             </div>
-            
+
             {/* Logo container */}
             <div className="w-32 h-32 flex-shrink-0">
-              <Image 
-                src={`${base}/institute-logo.png`} 
-                alt="Institute Logo" 
+              <Image
+                src={`${base}/institute-logo.png`}
+                alt="Institute Logo"
                 width={128}
                 height={128}
-                className="w-full h-full object-contain" 
+                className="w-full h-full object-contain"
               />
             </div>
           </div>
-  
-          {/* Rest of the component remains the same */}
+
           <div className="mb-4">
-            <WeightedGradesTable 
+            <WeightedGradesTable
               examSections={reportData.examSections}
+              attendance={reportData.attendance}
               lang={lang}
             />
           </div>
-  
+
           <div className="mb-4 bg-gray-50 p-3 rounded-lg">
             <p className="font-semibold text-gray-700 mb-1 text-sm">{t.notes}:</p>
             <div className="min-h-8 bg-white p-2 rounded border border-gray-200 text-sm">

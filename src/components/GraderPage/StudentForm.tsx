@@ -19,6 +19,11 @@ const translations = {
     cancel: 'Abbrechen',
     validation: {
       required: 'Dieses Feld ist erforderlich'
+    },
+    attendance: {
+      label: 'Anwesenheit',
+      attended: 'Besuchte Stunden',
+      total: 'Gesamtstunden'
     }
   },
   ar: {
@@ -36,6 +41,11 @@ const translations = {
     cancel: 'إلغاء',
     validation: {
       required: 'هذا الحقل مطلوب'
+    },
+    attendance: {
+      label: 'الحضور',
+      attended: 'الحصص المحضورة',
+      total: 'إجمالي الحصص'
     }
   }
 } as const;
@@ -55,29 +65,33 @@ export default function StudentForm({
 }: StudentFormProps) {
   const t = translations[lang];
   const isRTL = lang === 'ar';
-  
+
   const [formData, setFormData] = useState<StudentFormData>({
     name: '',
     gender: 'm',
-    notes: ''
+    notes: '',
+    attendance: {
+      attended: 0,
+      total: 0
+    }
   });
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!formData.name.trim()) {
       newErrors.name = t.validation.required;
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
       onSubmit(formData);
       onClose();
@@ -125,8 +139,8 @@ export default function StudentForm({
                   onChange={e => setFormData({ ...formData, name: e.target.value })}
                   className={`
                     w-full rounded-md shadow-sm 
-                    ${errors.name 
-                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500' 
+                    ${errors.name
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                     }
                   `}
@@ -160,6 +174,43 @@ export default function StudentForm({
                     />
                     <span className="ml-2 text-sm text-gray-700">{t.female}</span>
                   </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t.attendance.label}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.attendance.attended}
+                    onChange={e => setFormData({
+                      ...formData,
+                      attendance: {
+                        ...formData.attendance,
+                        attended: +e.target.value
+                      }
+                    })}
+                    placeholder={t.attendance.attended}
+                    className="w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                  <span className="text-gray-500 self-center">/</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.attendance.total}
+                    onChange={e => setFormData({
+                      ...formData,
+                      attendance: {
+                        ...formData.attendance,
+                        total: +e.target.value
+                      }
+                    })}
+                    placeholder={t.attendance.total}
+                    className="w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
                 </div>
               </div>
 

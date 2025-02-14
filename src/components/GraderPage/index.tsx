@@ -5,7 +5,7 @@ import { parse } from 'csv-parse/sync';
 import { Dialog, Tab } from '@headlessui/react';
 import { Menu, X } from 'lucide-react';
 import { compress } from '@/lib/compression';
-import { ReportData } from '@/types/report';
+import { AttendanceData, ReportData } from '@/types/report';
 import { ExamSection, Student, ValidationErrors } from '@/types/grader';
 import GraderSidebar from './GraderSidebar';
 import GradesGrid from './GradesGrid';
@@ -145,7 +145,7 @@ export default function GraderPage({ lang }: GraderPageProps) {
 
   const generateReportLinks = () => {
     if (!validateForm()) return;
-
+  
     const links = students.map(student => {
       const reportData: ReportData = {
         schoolYear,
@@ -157,14 +157,14 @@ export default function GraderPage({ lang }: GraderPageProps) {
           grade: student.grades[section.name.de]
         })),
         date: examDate,
-        notes: student.notes
+        notes: student.notes,
+        attendance: student.attendance
       };
-
+  
       const compressed = compress(reportData);
-      // Use the configuration helper to generate the correct URL
       return config.generateUrl(`${validLang}/2024-2025-S1?g=${compressed}`);
     });
-
+  
     setGeneratedLinks(links);
   };
 
@@ -224,17 +224,13 @@ export default function GraderPage({ lang }: GraderPageProps) {
     });
   }, [schoolYear, classroom, examDate, examSections, students]);
 
-  const generateId = () => {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  };
-  
-  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
   
     try {
       const fileContent = await file.text();
-      
+  
       // Parse the CSV content without type parameter
       const records = parse(fileContent, {
         columns: true,
@@ -242,7 +238,7 @@ export default function GraderPage({ lang }: GraderPageProps) {
         trim: true,
         cast: true
       }) as ParsedCSVRow[]; // Type assertion after parsing
-      
+  
       // Type checking for parsed records
       if (!Array.isArray(records) || records.length === 0) {
         throw new Error('No valid records found in CSV file');
@@ -254,7 +250,13 @@ export default function GraderPage({ lang }: GraderPageProps) {
         throw new Error('No headers found in CSV file');
       }
   
-      const sectionHeaders = headers.slice(1);
+      // Separate attendance column if it exists
+      const attendanceHeader = 'Attendance';
+      const hasAttendance = headers.includes(attendanceHeader);
+  
+      // Get section headers (excluding name and attendance)
+      const sectionHeaders = headers
+        .filter(header => header !== headers[0] && header !== attendanceHeader);
       const sectionCount = sectionHeaders.length;
       const sectionWeight = Math.floor(100 / sectionCount);
   
@@ -278,7 +280,7 @@ export default function GraderPage({ lang }: GraderPageProps) {
   
         // Create grades object with explicit type
         const grades: Record<string, number> = {};
-        
+  
         // Process each grade column
         sectionHeaders.forEach(header => {
           // Convert string grade to number, with validation
@@ -292,22 +294,40 @@ export default function GraderPage({ lang }: GraderPageProps) {
           grades[header] = gradeValue;
         });
   
+        // Parse attendance if available, or use default values
+        let attendance: AttendanceData;
+        if (hasAttendance && row[attendanceHeader]) {
+          const attendanceMatch = String(row[attendanceHeader]).match(/(\d+)\/(\d+)/);
+          if (attendanceMatch) {
+            const [, attended, total] = attendanceMatch;
+            attendance = {
+              attended: parseInt(attended, 10),
+              total: parseInt(total, 10)
+            };
+          } else {
+            attendance = { attended: 0, total: 0 }; // Default values if format is invalid
+          }
+        } else {
+          attendance = { attended: 0, total: 0 }; // Default values if no attendance data
+        }
+  
         return {
-          id: generateId(),
+          id: crypto.randomUUID(),
           name: row[headers[0]].trim(),
-          gender: 'm' as const, // Using const assertion for literal type
+          gender: 'm' as const,
           grades,
-          notes: ''
+          notes: '',
+          attendance
         };
       });
   
       setExamSections(newExamSections);
       setStudents(newStudents);
-      
+  
     } catch (error) {
       console.error('Error processing file:', error);
-      alert(error instanceof Error 
-        ? `Error processing CSV: ${error.message}` 
+      alert(error instanceof Error
+        ? `Error processing CSV: ${error.message}`
         : 'An unexpected error occurred while processing the CSV file'
       );
     }
@@ -416,7 +436,7 @@ export default function GraderPage({ lang }: GraderPageProps) {
               </button>
 
               <FileImport
-                onCsvImport={handleFileImport}
+                onCsvImport={handleCsvImport}
                 onXlsxImport={(sections, students) => {
                   setExamSections(sections);
                   setStudents(students);
@@ -462,7 +482,8 @@ export default function GraderPage({ lang }: GraderPageProps) {
                               grade: student.grades[section.name.de]
                             })),
                             date: examDate,
-                            notes: student.notes
+                            notes: student.notes,
+                            attendance: student.attendance
                           }}
                         />
                       </Tab.Panel>

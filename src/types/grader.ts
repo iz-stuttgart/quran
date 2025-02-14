@@ -1,3 +1,5 @@
+import { AttendanceData } from "./report";
+
 /**
  * Supported languages in the application
  */
@@ -49,6 +51,7 @@ export interface GradedExamSection extends ExamSection {
  * Student data structure
  */
 export interface Student {
+  attendance: AttendanceData;
   id: string;             // Unique identifier
   name: string;           // Student's full name
   gender: Gender;         // Student's gender
@@ -74,6 +77,7 @@ export interface StudentFormData {
   name: string;
   gender: Gender;
   notes?: string;
+  attendance: AttendanceData
 }
 
 /**

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Plus, X, User, Search, Check } from 'lucide-react';
-import { 
-  ExamSection, 
-  Language, 
-  Student, 
-  ValidationErrors, 
+import {
+  ExamSection,
+  Language,
+  Student,
+  ValidationErrors,
   StudentFilter,
-  GRADE_CONSTRAINTS 
+  GRADE_CONSTRAINTS
 } from '@/types/grader';
+import { AttendanceData } from '@/types/report';
 
 const translations = {
   de: {
@@ -33,6 +34,10 @@ const translations = {
     validation: {
       required: 'Pflichtfeld',
       invalidGrade: 'Note muss zwischen 1 und 6 liegen'
+    },
+    attendance: {
+      label: 'Anwesenheit',
+      description: 'Besuchte/Gesamte Unterrichtsstunden'
     }
   },
   ar: {
@@ -58,6 +63,10 @@ const translations = {
     validation: {
       required: 'حقل مطلوب',
       invalidGrade: 'الدرجة يجب أن تكون بين 1 و 6'
+    },
+    attendance: {
+      label: 'الحضور',
+      description: 'الحصص المحضورة/إجمالي الحصص'
     }
   }
 } as const;
@@ -78,20 +87,42 @@ export default function GradesGrid({
   onStudentsChange
 }: GradesGridProps) {
   const t = translations[lang];
-  
+
   const [filter, setFilter] = useState<StudentFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const handleStudentChange = (studentId: string, field: keyof Omit<Student, 'grades' | 'attendance'>, value: string) => {
+    onStudentsChange(students.map(student =>
+      student.id === studentId
+        ? { ...student, [field]: value }
+        : student
+    ));
+  };
+
+  const handleAttendanceChange = (studentId: string, field: keyof AttendanceData, value: number) => {
+    onStudentsChange(students.map(student =>
+      student.id === studentId
+        ? {
+          ...student,
+          attendance: {
+            ...student.attendance,
+            [field]: value
+          }
+        }
+        : student
+    ));
+  };
+
   const isValidGrade = (grade: number | undefined): boolean => {
     if (grade === undefined) return false;
-    return grade >= GRADE_CONSTRAINTS.MIN && 
-           grade <= GRADE_CONSTRAINTS.MAX && 
-           !isNaN(grade);
+    return grade >= GRADE_CONSTRAINTS.MIN &&
+      grade <= GRADE_CONSTRAINTS.MAX &&
+      !isNaN(grade);
   };
 
   const isStudentComplete = (student: Student): boolean => {
     if (!student.name.trim()) return false;
-    return examSections.every(section => 
+    return examSections.every(section =>
       isValidGrade(student.grades[section.name.de])
     );
   };
@@ -108,12 +139,12 @@ export default function GradesGrid({
   };
 
   const filteredStudents = students.filter(student => {
-    const matchesFilter = 
+    const matchesFilter =
       filter === 'all' ||
       (filter === 'complete' && isStudentComplete(student)) ||
       (filter === 'incomplete' && !isStudentComplete(student));
 
-    const matchesSearch = 
+    const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesFilter && matchesSearch;
@@ -125,7 +156,11 @@ export default function GradesGrid({
       name: '',
       gender: 'm',
       grades: {},
-      notes: ''
+      notes: '',
+      attendance: {
+        attended: 0,
+        total: 0
+      }
     };
     onStudentsChange([...students, newStudent]);
   };
@@ -134,29 +169,21 @@ export default function GradesGrid({
     onStudentsChange(students.filter(s => s.id !== studentId));
   };
 
-  const handleStudentChange = (studentId: string, field: keyof Student, value: string) => {
-    onStudentsChange(students.map(student => 
-      student.id === studentId
-        ? { ...student, [field]: value }
-        : student
-    ));
-  };
-
   const handleGradeChange = (studentId: string, sectionName: string, value: string) => {
     const numValue = value === '' ? undefined : Number(value);
-    
+
     const isValidFormat = !value || (!isNaN(Number(value)) && value.length <= 3);
     if (!isValidFormat) return;
 
     onStudentsChange(students.map(student =>
       student.id === studentId
         ? {
-            ...student,
-            grades: {
-              ...student.grades,
-              [sectionName]: numValue
-            }
+          ...student,
+          grades: {
+            ...student.grades,
+            [sectionName]: numValue
           }
+        }
         : student
     ));
   };
@@ -353,6 +380,33 @@ export default function GradesGrid({
               </div>
             </div>
 
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-sm text-gray-600">{t.attendance.label}:</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="0"
+                  value={student.attendance?.attended || ''}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value) || 0;
+                    handleAttendanceChange(student.id, 'attended', newValue);
+                  }}
+                  className="w-16 rounded-md border-gray-300 text-center"
+                />
+                <span className="text-gray-500">/</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={student.attendance?.total || ''}
+                  onChange={(e) => {
+                    const newValue = parseInt(e.target.value) || 0;
+                    handleAttendanceChange(student.id, 'total', newValue);
+                  }}
+                  className="w-16 rounded-md border-gray-300 text-center"
+                />
+              </div>
+            </div>
+
             {/* Notes Section */}
             <div className="p-4 bg-gray-50 border-t border-gray-200">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -380,7 +434,7 @@ export default function GradesGrid({
             {t.noResults}
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            {searchQuery 
+            {searchQuery
               ? 'Try adjusting your search or filter criteria.'
               : 'Try changing your filter selection.'}
           </p>

@@ -103,7 +103,11 @@ export function FileImport({ onXlsxImport, onCsvImport, translations }: FileImpo
             name: studentName,
             gender: 'm',
             grades: {},
-            notes: ''
+            notes: '',
+            attendance: {
+              attended: 0,
+              total: 0
+            }
           };
 
           // Assign grades
