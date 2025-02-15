@@ -28,8 +28,7 @@ const translations = {
     download: 'Als PDF herunterladen',
     print: 'Drucken',
     attendance: {
-      label: 'Anwesenheit',
-      description: 'Besuchte/Gesamte Unterrichtsstunden'
+      label: 'Anwesenheit'
     }
   },
   ar: {
@@ -49,8 +48,7 @@ const translations = {
     download: 'تحميل كملف PDF',
     print: 'طباعة',
     attendance: {
-      label: 'الحضور',
-      description: 'الحصص المحضورة/إجمالي الحصص'
+      label: 'الحضور'
     }
   }
 } as const;

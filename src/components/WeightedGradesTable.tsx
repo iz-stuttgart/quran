@@ -17,7 +17,8 @@ const translations = {
     totalGrade: 'Gesamtnote',
     attendance: {
       label: 'Anwesenheit',
-      description: 'Besuchte/Gesamte Unterrichtsstunden'
+      description: 'Besuchte/Gesamte Unterrichtsstunden',
+      separator: '/'
     }
   },
   ar: {
@@ -27,7 +28,8 @@ const translations = {
     totalGrade: 'المجموع النهائي',
     attendance: {
       label: 'الحضور',
-      description: 'الحصص المحضورة/إجمالي الحصص'
+      description: 'الحصص المحضورة/إجمالي الحصص',
+      separator: '\\'
     }
   }
 } as const;
@@ -85,15 +87,12 @@ const WeightedGradesTable: React.FC<WeightedGradesTableProps> = ({
               <span className="text-green-700 font-medium">
                 {attendance.attended}
               </span>
-              <span className="text-gray-600">/</span>
+              <span className="text-gray-600">{t.attendance.separator}</span>
               <span className="text-gray-600">
                 {attendance.total}
               </span>
             </div>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            {t.attendance.description}
-          </p>
         </div>
       )}
 
