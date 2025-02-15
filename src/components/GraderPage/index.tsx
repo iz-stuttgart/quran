@@ -14,6 +14,7 @@ import CertificatePage from '@/components/CertificatePage';
 import { clearLocalStorage, loadFromLocalStorage, saveToLocalStorage } from '@/lib/storage';
 import { defaultExamSections } from '@/lib/defaults';
 import { FileImport } from './FileImport';
+import BatchPDFGenerator from '@/components/BatchPDFGenerator';
 
 const config = {
   // Base path for the application
@@ -48,7 +49,8 @@ const translations = {
     import: {
       csv: 'CSV importieren',
       xlsx: 'XLSX importieren'
-    }
+    },
+    downloadAll: 'Alle Zertifikate herunterladen'
   },
   ar: {
     title: 'إدخال الدرجات',
@@ -66,7 +68,8 @@ const translations = {
     import: {
       csv: 'استيراد CSV',
       xlsx: 'استيراد XLSX'
-    }
+    },
+    downloadAll: 'تحميل جميع الشهادات'
   }
 } as const;
 
@@ -434,6 +437,29 @@ export default function GraderPage({ lang }: GraderPageProps) {
               >
                 {t.generate}
               </button>
+
+              {generatedLinks.length > 0 && (
+                <BatchPDFGenerator
+                  students={students.map(student => ({
+                    name: student.name,
+                    data: {
+                      schoolYear,
+                      studentName: student.name,
+                      classroom,
+                      gender: student.gender,
+                      examSections: examSections.map(section => ({
+                        ...section,
+                        grade: student.grades[section.name.de]
+                      })),
+                      date: examDate,
+                      notes: student.notes,
+                      attendance: student.attendance
+                    }
+                  }))}
+                  lang={validLang}
+                  buttonText={t.downloadAll}
+                />
+              )}
 
               <FileImport
                 onCsvImport={handleCsvImport}
